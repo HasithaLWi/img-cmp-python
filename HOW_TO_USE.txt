@@ -1,0 +1,149 @@
+================================================================================
+📖 PixelScan: Complete User Guide & Feature Manual (v0.1.2.0)
+================================================================================
+Developer : Hasitha Wijesinghe
+GitHub    : https://github.com/HasithaLWi
+================================================================================
+
+TABLE OF CONTENTS:
+------------------
+1. Introduction & Overview
+2. Tab 1: Compress Image
+3. Tab 2: Decompress Image
+4. Tab 3: Lossless Pixel Verifier
+5. Tab 4: Direct File Formatter
+6. Frequently Asked Questions (FAQ) & Troubleshooting
+
+================================================================================
+1. INTRODUCTION & OVERVIEW
+================================================================================
+PixelScan is a high-speed desktop utility that operates at the individual pixel
+level. It offers two core capabilities:
+
+A) Proprietary Binary Compression:
+   Encodes raw image pixels into compact, secure ".icomp" binary files. 
+   These files cannot be opened by standard third-party photo viewers,
+   making them ideal for private storage and archiving.
+
+B) Direct Format Optimization:
+   Standard image files (especially camera photos) contain tens or hundreds of
+   kilobytes of hidden EXIF metadata, camera thumbnails, and unoptimized tables.
+   PixelScan strips this bloat and optimizes images to WebP, JPEG, or PNG
+   saving up to 70%-90% of file size with near-lossless visual quality.
+
+
+================================================================================
+2. TAB 1: COMPRESS IMAGE
+================================================================================
+Use this tab to scan an image and compress it into a .icomp binary package.
+
+STEP-BY-STEP:
+1. Click "📂 Browse Image..." and select any JPEG, PNG, WebP, or BMP file.
+   A sharp preview and resolution info will appear on the left.
+2. Choose your Compression Algorithm:
+   - 🚀 Binary Smart Mode (Recommended) :
+     Uses real frequency quantization directly in binary. Eliminates text bloat
+     and creates genuinely small files that can beat original JPEG sizes.
+   - 🛡️ Binary Lossless Mode :
+     Encodes raw bytes with 2D DPCM spatial prediction. 100% exact pixels (0 error)
+     with zero ASCII text bloat.
+   - ⚡ Delta-RLE String Mode :
+     Stores pixel differences (dr, dg, db) from neighboring pixels.
+   - 🧩 Pattern Deduplication Mode :
+     Finds repeated pixel blocks and identical rows, stores them once in a
+     pattern dictionary, and references them on decompress.
+   - 🎨 Palette String Mode :
+     Replaces colors with a single-number index table (0, 1, 0, 2).
+   - 🔢 HEX / 🟢 RLE / 🔵 RAW Modes :
+     Various human-readable string formats for inspection and analysis.
+3. Select your Compression Target:
+   - 100% Lossless (Exact) : Exact bit-for-bit pixel matching.
+   - 85% High Quality      : Visually indistinguishable, cuts size by ~50%.
+   - 65% Max Compression   : Quantizes minor pixel noise for smallest files.
+4. Click "⚡ Compress Image".
+   - The app scans each pixel in a background thread without freezing the UI.
+   - The resulting package is automatically saved to the "output/" folder.
+   - You can view a snippet of the generated row/column string in the preview box.
+
+
+================================================================================
+3. TAB 2: DECOMPRESS IMAGE
+================================================================================
+Use this tab to restore and export an image from an ".icomp" binary package.
+
+STEP-BY-STEP:
+1. Click "📂 Browse .icomp File..." and select your compressed package.
+   (If you just ran compression in Tab 1, it is loaded automatically!)
+2. Click "🔄 Decompress & Reconstruct Image".
+   - PixelScan decodes the binary stream and reconstructs the image pixels.
+   - A full preview will appear in the right-hand panel.
+3. Save or Export the Restored Image:
+   - 💾 Save as Lossless PNG : 100% exact pixels, ideal for graphics & editing.
+   - 🚀 Save as Modern WebP  : ~70%-80% smaller than PNG/JPEG with near-lossless
+                               clarity. Recommended for web and archiving.
+   - 💾 Save as JPEG         : Choose your export quality:
+       * ⭐ High Quality 95% : Full 4:4:4 color resolution (no color bleed).
+       * ⚡ Standard 75%     : Standard web compression.
+       * 📦 Compact 60%      : Maximum compression for thumbnails.
+
+
+================================================================================
+4. TAB 3: LOSSLESS PIXEL VERIFIER
+================================================================================
+Use this tab to prove that the reconstructed image is 100% identical to the
+original down to the exact mathematical RGB color values.
+
+STEP-BY-STEP:
+1. Make sure you have loaded an image in Tab 1 and decompressed it in Tab 2.
+2. Go to Tab 3 and click "🔬 Run Verification On Current Images".
+3. PixelScan executes a C-accelerated difference test across all pixels:
+   - Checks every single pixel (e.g., all 4,200,000 pixels in a 4.2 MP image).
+   - Reports matched pixels, mismatched pixels, and maximum difference.
+   - If 100% identical, it confirms: "🎉 VERIFICATION PASSED: 100.0% LOSSLESS!"
+
+
+================================================================================
+5. TAB 4: DIRECT FILE FORMATTER
+================================================================================
+Use this tab for instant, 1-click image optimization without manually doing
+compress -> decompress.
+
+STEP-BY-STEP:
+1. Click "📂 Browse Image..." and pick any image.
+2. Select an Output Format & Quality Preset:
+   - 🚀 WebP High Quality 95% : Near-lossless visual quality, ~70-76% smaller.
+   - ⚡ WebP Balanced 85%     : Sweet spot for web and mobile delivery.
+   - 📦 WebP Standard 75%     : Smallest web image size.
+   - 🛡️ WebP Lossless 100%    : Bit-for-bit exact pixels, ~30% smaller than PNG.
+   - ⭐ JPEG High Quality 95% : Full 4:4:4 chroma subsampling, camera quality.
+   - ⚡ JPEG Standard 75%     : Standard 4:2:0 subsampling, high reduction.
+   - 📦 JPEG Compact 60%      : Maximum JPEG compression for thumbnails.
+   - 💎 Lossless PNG          : Level 9 zlib compression, preserves transparency.
+3. Click "⚡ Format & Optimize Now".
+   - Automatically saves the optimized file to "output/".
+   - Shows an instant size reduction comparison (e.g., "-76.1% saved!").
+   - Click "👁️ Open Formatted Image" to immediately view the result.
+
+
+================================================================================
+6. FREQUENTLY ASKED QUESTIONS (FAQ) & TROUBLESHOOTING
+================================================================================
+
+Q1: Windows SmartScreen shows "Windows protected your PC" when I first launch.
+A: This happens for any new, unsigned executable downloaded from the internet.
+   Click "More info" and then click "Run anyway". Windows will remember your
+   decision and will not ask again.
+
+Q2: Can other photo viewers (like Windows Photos or Photoshop) open .icomp files?
+A: No. ".icomp" is PixelScan's proprietary binary container. To share images
+   with other people, export them as WebP, JPEG, or PNG using the "Decompress"
+   or "Direct Formatter" tabs.
+
+Q3: Can I run this from a USB flash drive?
+A: Yes! PixelScan is fully portable. You can copy the folder to any USB drive
+   and run it on any 64-bit Windows computer without installing anything.
+
+Q4: Where are my files saved?
+A: All outputs are automatically saved inside the "output" folder located in
+   the same directory as the application.
+================================================================================

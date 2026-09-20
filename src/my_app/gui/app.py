@@ -1604,15 +1604,107 @@ class ImageCompressorApp(ctk.CTk):
         )
         lbl_info.pack(pady=(0, 20))
 
+        btn_row = ctk.CTkFrame(card, fg_color="transparent")
+        btn_row.pack(pady=(0, 15))
+
+        btn_view_license = ctk.CTkButton(
+            btn_row,
+            text="📄 View License",
+            width=120,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
+            command=self._show_license_dialog
+        )
+        btn_view_license.pack(side=tk.LEFT, padx=6)
+
         btn_close = ctk.CTkButton(
-            card,
+            btn_row,
             text="Close",
             width=100,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
             command=dialog.destroy
         )
+        btn_close.pack(side=tk.LEFT, padx=6)
+
+    def _show_license_dialog(self):
+        """Displays the full MIT license text in a modal dialog."""
+        lic_dialog = ctk.CTkToplevel(self)
+        lic_dialog.title("PixelScan — MIT License")
+        lic_dialog.geometry("560x420")
+        lic_dialog.resizable(False, False)
+        lic_dialog.attributes("-topmost", True)
+
+        self.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - 560) // 2
+        y = self.winfo_y() + (self.winfo_height() - 420) // 2
+        lic_dialog.geometry(f"+{x}+{y}")
+
+        card = ctk.CTkFrame(lic_dialog, corner_radius=12, fg_color=COLOR_CARD)
+        card.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+
+        lbl_title = ctk.CTkLabel(
+            card,
+            text="MIT License",
+            font=ctk.CTkFont(family="Segoe UI", size=16, weight="bold"),
+            text_color=COLOR_PRIMARY
+        )
+        lbl_title.pack(pady=(15, 6))
+
+        txt_box = ctk.CTkTextbox(
+            card,
+            font=ctk.CTkFont(family="Consolas", size=11),
+            fg_color="#11111b",
+            text_color="#cdd6f4"
+        )
+        txt_box.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 12))
+
+        license_path = Path(__file__).resolve().parent.parent.parent.parent / "LICENSE"
+        if license_path.exists():
+            try:
+                license_text = license_path.read_text(encoding="utf-8")
+            except Exception:
+                license_text = self._get_default_license_text()
+        else:
+            license_text = self._get_default_license_text()
+
+        txt_box.insert("1.0", license_text)
+        txt_box.configure(state="disabled")
+
+        btn_close = ctk.CTkButton(
+            card,
+            text="Close",
+            width=100,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            command=lic_dialog.destroy
+        )
         btn_close.pack(pady=(0, 15))
+
+    def _get_default_license_text(self) -> str:
+        return (
+            "MIT License\n\n"
+            "Copyright (c) 2026 Hasitha Wijesinghe (https://github.com/HasithaLWi)\n\n"
+            "Permission is hereby granted, free of charge, to any person obtaining a copy\n"
+            "of this software and associated documentation files (the \"Software\"), to deal\n"
+            "in the Software without restriction, including without limitation the rights\n"
+            "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n"
+            "copies of the Software, and to permit persons to whom the Software is\n"
+            "furnished to do so, subject to the following conditions:\n\n"
+            "The above copyright notice and this permission notice shall be included in all\n"
+            "copies or substantial portions of the Software.\n\n"
+            "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n"
+            "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n"
+            "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n"
+            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n"
+            "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n"
+            "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n"
+            "SOFTWARE."
+        )
+
 
 
 def launch_gui():
