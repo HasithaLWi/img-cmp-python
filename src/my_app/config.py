@@ -1,5 +1,13 @@
-"""Configuration and constants for Image Compressor & Decompressor."""
+"""Configuration and constants for Image Compressor & Decompressor.
+
+Copyright (c) 2026 Hasitha Wijesinghe (https://github.com/HasithaLWi)
+Licensed under the MIT License.
+"""
 from pathlib import Path
+
+
+# Application Metadata
+APP_VERSION = "0.1.2.0"
 
 # Base Paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -19,6 +27,7 @@ IMAGE_EXTENSIONS = [
 COMPRESSED_EXTENSIONS = [
     ("Compressed Image Package (*.icomp)", "*.icomp"),
     ("All Files", "*.*")
+
 ]
 
 TEXT_EXTENSIONS = [

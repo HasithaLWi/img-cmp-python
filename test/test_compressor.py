@@ -1,5 +1,10 @@
-"""Unit tests for PixelCoder image compressor and decompressor across all modes."""
+"""Unit tests for PixelCoder image compressor and decompressor across all modes.
+
+Copyright (c) 2026 Hasitha Wijesinghe (https://github.com/HasithaLWi)
+Licensed under the MIT License.
+"""
 import unittest
+
 from pathlib import Path
 from PIL import Image
 

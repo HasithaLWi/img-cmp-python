@@ -25,7 +25,7 @@ A Python desktop application that scans images row-by-row and column-by-column i
 3. ⚡ **Delta-RLE Mode (`delta`)** *(Best Text Compression)*:
    - Encodes difference ($\Delta$) from previous pixel (`dr,dg,db`).
    - Reduces compressed text package to **213.6 KB**.
-4. 🧩 **Pattern Deduplication Mode (`pattern`)** *(Your Idea!)*:
+4. 🧩 **Pattern Deduplication Mode (`pattern`)**:
    - Searches for duplicate rows and repeated multi-pixel patterns across the image.
    - Saves unique patterns **once** in a `PATTERNS` dictionary (`P0=...;P1=...`).
    - Replaces duplicate occurrences with `P0`, `P1`, or `SAME_AS_R{prev_row}`.
@@ -88,4 +88,13 @@ Built with **CustomTkinter** for Windows 11 / macOS dark mode aesthetics:
   ```powershell
   python src/my_app/main.py --verify images/ICtest.jpeg output/restored.png
   ```
+
+---
+
+## 📄 License & Copyright
+
+Copyright (c) 2026 **Hasitha Wijesinghe** ([https://github.com/HasithaLWi](https://github.com/HasithaLWi)). All rights reserved.
+
+This project is licensed under the [MIT License](LICENSE).
+
 

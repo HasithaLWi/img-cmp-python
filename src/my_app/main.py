@@ -1,7 +1,12 @@
-"""Entry point for PixelScan Image Compressor & Decompressor."""
+"""Entry point for PixelScan Image Compressor & Decompressor.
+
+Copyright (c) 2026 Hasitha Wijesinghe (https://github.com/HasithaLWi)
+Licensed under the MIT License.
+"""
 import argparse
 import sys
 from pathlib import Path
+
 
 # Add project root to sys.path to enable direct execution
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent

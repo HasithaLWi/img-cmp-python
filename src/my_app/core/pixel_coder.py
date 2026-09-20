@@ -1,5 +1,10 @@
-"""Core pixel scanning, string serialization, compression and decompression engine."""
+"""Core pixel scanning, string serialization, compression and decompression engine.
+
+Copyright (c) 2026 Hasitha Wijesinghe (https://github.com/HasithaLWi)
+Licensed under the MIT License.
+"""
 from __future__ import annotations
+
 
 import io
 import struct
@@ -81,17 +86,16 @@ class PixelCoder:
             if mode == MODE_BIN_SMART:
                 desc = (
                     f"HEADER:W={width};H={height};C={channels};F=BINARY_SMART;Q={quality}\n"
-                    f"# REAL-LIFE BINARY SMART COMPRESSION (NO TEXT BLOAT)\n"
-                    f"# Bypasses ASCII text strings entirely to avoid 300% text inflation.\n"
-                    f"# Uses real-world frequency quantization and entropy coding in pure binary bytes.\n"
-                    f"# Produces genuine small file sizes that beat original JPEG files!"
+                    f"# BINARY SMART COMPRESSION\n"
+                    f"# Encodes pixel frequency quantization directly into binary bytes.\n"
+                    f"# Bypasses ASCII serialization for maximum compression ratio."
                 )
             else:
                 desc = (
                     f"HEADER:W={width};H={height};C={channels};F=BINARY_LOSSLESS;Q=100\n"
-                    f"# REAL-LIFE BINARY LOSSLESS COMPRESSION (NO TEXT BLOAT)\n"
-                    f"# Encodes pixels directly as raw binary bytes with 2D DPCM prediction.\n"
-                    f"# 100% Mathematically exact (0 pixel errors) without text overhead."
+                    f"# BINARY LOSSLESS COMPRESSION\n"
+                    f"# Encodes raw pixel bytes directly with 2D DPCM spatial prediction.\n"
+                    f"# Exact mathematical reconstruction (0 pixel error) in pure binary."
                 )
             meta = {
                 "width": width,

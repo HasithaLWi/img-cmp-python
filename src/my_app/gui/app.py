@@ -1,5 +1,8 @@
-"""Modern Desktop GUI for Image Compression and Decompression built with CustomTkinter."""
-from __future__ import annotations
+"""Modern Desktop GUI for Image Compression and Decompression built with CustomTkinter.
+
+Copyright (c) 2026 Hasitha Wijesinghe (https://github.com/HasithaLWi)
+Licensed under the MIT License.
+"""
 
 import os
 import threading
@@ -13,6 +16,7 @@ from PIL import Image
 
 from src.my_app.config import (
     ALL_MODES,
+    APP_VERSION,
     COMPRESSED_EXTENSIONS,
     DEFAULT_COMPRESSED_EXT,
     DEFAULT_TEXT_EXT,
@@ -53,7 +57,7 @@ class ImageCompressorApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("⚡ PixelScan — Image Compressor & Decompressor")
+        self.title(f"⚡ PixelScan — Image Compressor & Decompressor (v{APP_VERSION})")
         self.geometry("1140x880")
         self.minsize(1020, 760)
 
@@ -119,7 +123,7 @@ class ImageCompressorApp(ctk.CTk):
 
         lbl_sub = ctk.CTkLabel(
             title_box,
-            text="Real-Life Binary Compression & Lossless Pixel Deduplication Engines",
+            text="High-Performance Binary Compression & Lossless Deduplication Suite",
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=COLOR_TEXT_MUTED
         )
@@ -135,7 +139,20 @@ class ImageCompressorApp(ctk.CTk):
             font=ctk.CTkFont(family="Segoe UI", size=11)
         )
         self.theme_switch.select()
-        self.theme_switch.pack(side=tk.RIGHT, padx=20, pady=15)
+        self.theme_switch.pack(side=tk.RIGHT, padx=(5, 20), pady=15)
+
+        # About Button in Header
+        btn_about = ctk.CTkButton(
+            header,
+            text="ℹ️ About",
+            width=75,
+            height=28,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
+            command=self._show_about_dialog
+        )
+        btn_about.pack(side=tk.RIGHT, padx=(0, 5), pady=15)
 
         # -------------------------------------------------------------
         # Main Tabview
@@ -173,6 +190,14 @@ class ImageCompressorApp(ctk.CTk):
             anchor="w"
         )
         self.status_bar.pack(side=tk.LEFT, padx=15)
+
+        lbl_copyright = ctk.CTkLabel(
+            status_bar_frame,
+            text="© 2026 Hasitha Wijesinghe | MIT License",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color=COLOR_TEXT_MUTED
+        )
+        lbl_copyright.pack(side=tk.RIGHT, padx=15)
 
     def _toggle_appearance_mode(self):
         if self.theme_switch.get() == "Dark":
@@ -265,10 +290,10 @@ class ImageCompressorApp(ctk.CTk):
         mode_box = ctk.CTkFrame(right_scroll, corner_radius=8, fg_color=COLOR_CARD_SUB)
         mode_box.pack(fill=tk.X, padx=10, pady=(0, 8))
 
-        # Real-Life Binary Section
+        # Binary Engines Section
         lbl_bin_hdr = ctk.CTkLabel(
             mode_box,
-            text="🚀 REAL-LIFE BINARY ENGINE (NO TEXT BLOAT — SMALLEST FILES):",
+            text="🚀 BINARY ENGINES (PURE BINARY — SMALLEST FILES):",
             font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
             text_color=COLOR_SUCCESS
         )
@@ -276,7 +301,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_bin_smart = ctk.CTkRadioButton(
             mode_box,
-            text="🚀 Real-Life Binary Smart Mode (Smallest! ~11-20 KB, Beats JPEG!)\n   Uses real frequency quantization directly in binary. Bypasses text strings completely.",
+            text="🚀 Binary Smart Mode (High Compression, Beats JPEG)\n   Frequency quantization in pure binary. Bypasses text strings completely.",
             value=MODE_BIN_SMART,
             variable=self.string_mode_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -285,7 +310,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_bin_lossless = ctk.CTkRadioButton(
             mode_box,
-            text="🛡️ Real-Life Binary Lossless Mode (No text bloat, 100% exact pixels: ~174 KB)\n   Encodes raw bytes directly with 2D DPCM prediction. Zero text inflation.",
+            text="🛡️ Binary Lossless Mode (100% Exact Pixels, Zero Text Overhead)\n   Encodes raw bytes directly with 2D DPCM spatial prediction.",
             value=MODE_BIN_LOSSLESS,
             variable=self.string_mode_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -295,7 +320,7 @@ class ImageCompressorApp(ctk.CTk):
         # Text-Based Section
         lbl_txt_hdr = ctk.CTkLabel(
             mode_box,
-            text="📝 TEXT-BASED STRING ENGINES (HUMAN-READABLE STRINGS):",
+            text="📝 TEXT-BASED STRING ENGINES (HUMAN-READABLE):",
             font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
             text_color=COLOR_PRIMARY
         )
@@ -303,7 +328,7 @@ class ImageCompressorApp(ctk.CTk):
 
         text_modes = [
             (MODE_DELTA, "⚡ Delta-RLE String Mode — Stores pixel differences (dr,dg,db)"),
-            (MODE_PATTERN, "🧩 Pattern Deduplication Mode (Your Idea!) — Saves repeated patterns once, places on decompress"),
+            (MODE_PATTERN, "🧩 Pattern Deduplication Mode — Stores repeated patterns once, restores on decompress"),
             (MODE_PALETTE, "🎨 Palette String Mode — Unique color index table (0,1,0,2)"),
             (MODE_HEX, "🔢 HEX String Mode — 6-char hex (1B1725), removes all commas"),
             (MODE_RLE, "🟢 Standard RGB RLE Mode — Run-length encodes identical pixels as count*r,g,b"),
@@ -537,7 +562,7 @@ class ImageCompressorApp(ctk.CTk):
 
         self.btn_save_restored_png = ctk.CTkButton(
             left_scroll,
-            text="💾 Save as Lossless PNG (Exact Pixels, ~4 MB)",
+            text="💾 Save as Lossless PNG (Exact Pixels)",
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
             fg_color=COLOR_SUCCESS,
             hover_color=COLOR_SUCCESS_HOVER,
@@ -548,7 +573,7 @@ class ImageCompressorApp(ctk.CTk):
 
         self.btn_save_restored_webp = ctk.CTkButton(
             left_scroll,
-            text="🚀 Save as Modern WebP (~560 KB, Best Size & Quality)",
+            text="🚀 Save as Modern WebP (Best Size & Quality)",
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
             fg_color=COLOR_PRIMARY,
             hover_color=COLOR_PRIMARY_HOVER,
@@ -570,7 +595,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_jpeg_high = ctk.CTkRadioButton(
             jpeg_box,
-            text="⭐ High Quality 95% (~914 KB, Matches Camera)",
+            text="⭐ High Quality 95% (Full Color Resolution)",
             value=95,
             variable=self.jpeg_export_quality_var,
             font=ctk.CTkFont(family="Segoe UI", size=10)
@@ -579,7 +604,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_jpeg_std = ctk.CTkRadioButton(
             jpeg_box,
-            text="⚡ Standard 75% (~187 KB, Compact)",
+            text="⚡ Standard 75% (Balanced Compression)",
             value=75,
             variable=self.jpeg_export_quality_var,
             font=ctk.CTkFont(family="Segoe UI", size=10)
@@ -588,7 +613,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_jpeg_small = ctk.CTkRadioButton(
             jpeg_box,
-            text="📦 Small 60% (~130 KB, Max Compression)",
+            text="📦 Compact 60% (Maximum Compression)",
             value=60,
             variable=self.jpeg_export_quality_var,
             font=ctk.CTkFont(family="Segoe UI", size=10)
@@ -1155,7 +1180,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_w95 = ctk.CTkRadioButton(
             preset_box,
-            text="🚀 WebP High Quality 95% (Near-lossless visual fidelity, ~70% smaller than JPEG/PNG)\n   Preserves crisp details with advanced entropy coding. Ideal for photos & modern web.",
+            text="🚀 WebP High Quality 95% (Near-Lossless, Superior Compression)\n   Preserves crisp details with advanced entropy coding. Recommended for photos & web.",
             value="webp_95",
             variable=self.formatter_preset_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -1164,7 +1189,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_w85 = ctk.CTkRadioButton(
             preset_box,
-            text="⚡ WebP Balanced 85% (~80% smaller, ultra-fast loading for web & mobile)\n   Sweet spot between high quality and tiny file size.",
+            text="⚡ WebP Balanced 85% (Optimized Web Delivery)\n   Optimal balance between high visual fidelity and fast loading.",
             value="webp_85",
             variable=self.formatter_preset_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -1173,7 +1198,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_w75 = ctk.CTkRadioButton(
             preset_box,
-            text="📦 WebP Standard 75% (Maximum WebP size reduction)\n   Smallest web file size while retaining good visual clarity.",
+            text="📦 WebP Standard 75% (Maximum WebP Compression)\n   Lightweight file size while retaining good visual clarity.",
             value="webp_75",
             variable=self.formatter_preset_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -1182,7 +1207,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_wlossless = ctk.CTkRadioButton(
             preset_box,
-            text="🛡️ WebP Lossless 100% (Bit-for-bit exact pixels, ~25-35% smaller than PNG)\n   True lossless mathematical encoding without any pixel error.",
+            text="🛡️ WebP Lossless 100% (Bit-for-Bit Exact Pixels)\n   True mathematical lossless encoding without any pixel error.",
             value="webp_lossless",
             variable=self.formatter_preset_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -1200,7 +1225,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_j95 = ctk.CTkRadioButton(
             preset_box,
-            text="⭐ JPEG High Quality 95% (~914 KB, Full 4:4:4 color subsampling)\n   Strips bloated metadata while keeping 100% full color resolution without color bleed.",
+            text="⭐ JPEG High Quality 95% (Full 4:4:4 Chroma Subsampling)\n   Strips bloated metadata while keeping full color resolution without color bleed.",
             value="jpeg_95",
             variable=self.formatter_preset_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -1209,7 +1234,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_j75 = ctk.CTkRadioButton(
             preset_box,
-            text="⚡ JPEG Standard 75% (~187 KB, Standard 4:2:0 subsampling)\n   High reduction, perfect for emails, documents, and standard web sharing.",
+            text="⚡ JPEG Standard 75% (Standard 4:2:0 Subsampling)\n   Balanced compression, perfect for general web sharing and documents.",
             value="jpeg_75",
             variable=self.formatter_preset_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -1218,7 +1243,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_j60 = ctk.CTkRadioButton(
             preset_box,
-            text="📦 JPEG Compact 60% (~130 KB, Maximum size reduction)\n   Smallest JPEG file size for thumbnails and bandwidth-constrained devices.",
+            text="📦 JPEG Compact 60% (Maximum JPEG Compression)\n   Smallest JPEG file size for thumbnails and previews.",
             value="jpeg_60",
             variable=self.formatter_preset_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -1236,7 +1261,7 @@ class ImageCompressorApp(ctk.CTk):
 
         rb_png = ctk.CTkRadioButton(
             preset_box,
-            text="💎 Lossless PNG (Optimized zlib level 9, 100% exact pixels)\n   Preserves alpha channels and transparency with lossless compression.",
+            text="💎 Lossless PNG (Optimized zlib Level 9)\n   Preserves full alpha transparency with 100% exact pixels.",
             value="png_lossless",
             variable=self.formatter_preset_var,
             font=ctk.CTkFont(family="Segoe UI", size=11)
@@ -1528,6 +1553,66 @@ class ImageCompressorApp(ctk.CTk):
 
     def _set_status(self, text: str):
         self.status_bar.configure(text=f"Status: {text}")
+
+    def _show_about_dialog(self):
+        """Displays an attractive About dialog with author and copyright details."""
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("About PixelScan")
+        dialog.geometry("480x340")
+        dialog.resizable(False, False)
+        dialog.attributes("-topmost", True)
+
+        # Center relative to main app window
+        self.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - 480) // 2
+        y = self.winfo_y() + (self.winfo_height() - 340) // 2
+        dialog.geometry(f"+{x}+{y}")
+
+        card = ctk.CTkFrame(dialog, corner_radius=12, fg_color=COLOR_CARD)
+        card.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+
+        lbl_app_title = ctk.CTkLabel(
+            card,
+            text="⚡ PixelScan Image Compressor",
+            font=ctk.CTkFont(family="Segoe UI", size=18, weight="bold"),
+            text_color=COLOR_PRIMARY
+        )
+        lbl_app_title.pack(pady=(20, 4))
+
+        lbl_ver = ctk.CTkLabel(
+            card,
+            text=f"Version {APP_VERSION} — CustomTkinter Edition",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            text_color=COLOR_TEXT_MUTED
+        )
+        lbl_ver.pack(pady=(0, 15))
+
+        info_text = (
+            "An advanced image compression, decompression,\n"
+            "lossless pixel verification, and direct optimization suite.\n\n"
+            "Developed by: Hasitha Wijesinghe\n"
+            "GitHub: https://github.com/HasithaLWi\n"
+            "License: MIT License\n\n"
+            "Copyright © 2026 Hasitha Wijesinghe. All rights reserved."
+        )
+        lbl_info = ctk.CTkLabel(
+            card,
+            text=info_text,
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            text_color="#e2e8f0",
+            justify="center"
+        )
+        lbl_info.pack(pady=(0, 20))
+
+        btn_close = ctk.CTkButton(
+            card,
+            text="Close",
+            width=100,
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            command=dialog.destroy
+        )
+        btn_close.pack(pady=(0, 15))
 
 
 def launch_gui():
