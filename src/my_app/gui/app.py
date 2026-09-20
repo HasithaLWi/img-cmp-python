@@ -576,7 +576,16 @@ class ImageCompressorApp(tk.Tk):
             state=tk.DISABLED,
             command=lambda: self._save_restored_image(format_ext=".png")
         )
-        self.btn_save_restored_png.pack(fill=tk.X, pady=(4, 8))
+        self.btn_save_restored_png.pack(fill=tk.X, pady=(4, 6))
+
+        self.btn_save_restored_webp = ttk.Button(
+            left_frame,
+            text="🚀 Save as Modern WebP (~560 KB, Best Size & Quality)",
+            style="Primary.TButton",
+            state=tk.DISABLED,
+            command=lambda: self._save_restored_image(format_ext=".webp")
+        )
+        self.btn_save_restored_webp.pack(fill=tk.X, pady=(0, 8))
 
         # JPEG Export Quality Selection Box
         jpeg_box = tk.Frame(left_frame, bg=BG_INPUT, padx=10, pady=6, highlightthickness=1, highlightbackground=BORDER_COLOR)
@@ -932,6 +941,7 @@ class ImageCompressorApp(tk.Tk):
         self.decomp_progressbar.pack_forget()
         self.btn_run_decompress.config(text="🔄 Decompress & Reconstruct Image", state=tk.NORMAL)
         self.btn_save_restored_png.config(state=tk.NORMAL)
+        self.btn_save_restored_webp.config(state=tk.NORMAL)
         self.btn_save_restored_jpeg.config(state=tk.NORMAL)
 
         w, h = recon_img.size
@@ -962,7 +972,15 @@ class ImageCompressorApp(tk.Tk):
             return
         OUTPUT_DIR.mkdir(exist_ok=True)
         initial_name = "reconstructed_image" + format_ext
-        types = [("PNG Image", "*.png")] if format_ext == ".png" else [("JPEG Image", "*.jpeg;*.jpg")]
+        if format_ext == ".png":
+            types = [("PNG Image (*.png)", "*.png"), ("All Files", "*.*")]
+        elif format_ext in (".jpeg", ".jpg"):
+            types = [("JPEG Image (*.jpeg;*.jpg)", "*.jpeg;*.jpg"), ("All Files", "*.*")]
+        elif format_ext == ".webp":
+            types = [("WebP Image (*.webp)", "*.webp"), ("All Files", "*.*")]
+        else:
+            types = [("All Files", "*.*")]
+
         file_path = filedialog.asksaveasfilename(
             title=f"Save Restored Image ({format_ext.upper()})",
             initialdir=str(OUTPUT_DIR),
@@ -978,6 +996,8 @@ class ImageCompressorApp(tk.Tk):
                 q = self.jpeg_export_quality_var.get()
                 sub = 0 if q >= 90 else 2
                 save_img.save(file_path, quality=q, subsampling=sub)
+            elif format_ext == ".webp":
+                save_img.save(file_path, format="WEBP", quality=95)
             else:
                 save_img.save(file_path)
             self._set_status(f"Saved restored image to {Path(file_path).name}")
