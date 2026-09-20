@@ -1,14 +1,15 @@
-"""Modern Tkinter Desktop GUI for Image Compression and Decompression."""
+"""Modern Desktop GUI for Image Compression and Decompression built with CustomTkinter."""
 from __future__ import annotations
 
 import os
 import threading
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox
 from typing import Optional
 
-from PIL import Image, ImageTk
+import customtkinter as ctk
+from PIL import Image
 
 from src.my_app.config import (
     ALL_MODES,
@@ -20,9 +21,9 @@ from src.my_app.config import (
     MODE_BIN_LOSSLESS,
     MODE_BIN_SMART,
     MODE_DELTA,
-    MODE_PATTERN,
     MODE_HEX,
     MODE_PALETTE,
+    MODE_PATTERN,
     MODE_RAW,
     MODE_RLE,
     OUTPUT_DIR,
@@ -30,32 +31,31 @@ from src.my_app.config import (
 )
 from src.my_app.core.pixel_coder import PixelCoder
 
-# Color Palette (Catppuccin Mocha inspired dark theme)
-BG_DARK = "#181825"
-BG_PANEL = "#1e1e2e"
-BG_CARD = "#2a2b3d"
-BG_INPUT = "#313244"
-FG_MAIN = "#cdd6f4"
-FG_MUTED = "#a6adc8"
-FG_SUBTLE = "#6c7086"
-ACCENT_BLUE = "#89b4fa"
-ACCENT_GREEN = "#a6e3a1"
-ACCENT_YELLOW = "#f9e2af"
-ACCENT_RED = "#f38ba8"
-ACCENT_PURPLE = "#cba6f7"
-BORDER_COLOR = "#45475a"
+# Set CustomTkinter Theme & Appearance
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
+
+# Modern Palette
+COLOR_PRIMARY = "#3b82f6"       # Blue
+COLOR_PRIMARY_HOVER = "#2563eb"
+COLOR_SUCCESS = "#10b981"       # Emerald Green
+COLOR_SUCCESS_HOVER = "#059669"
+COLOR_SECONDARY = "#374151"     # Dark Slate
+COLOR_SECONDARY_HOVER = "#4b5563"
+COLOR_CARD = "#1e1e2e"          # Catppuccin Dark Card
+COLOR_CARD_SUB = "#282a36"      # Sub-card background
+COLOR_TEXT_MUTED = "#9ca3af"
 
 
-class ImageCompressorApp(tk.Tk):
-    """Main Tkinter GUI Application for Image Compression and Decompression."""
+class ImageCompressorApp(ctk.CTk):
+    """Main CustomTkinter Desktop Application for Image Compression and Decompression."""
 
     def __init__(self):
         super().__init__()
 
-        self.title("PixelScan Image Compressor & Decompressor")
-        self.geometry("1080x840")
-        self.minsize(980, 740)
-        self.configure(bg=BG_DARK)
+        self.title("⚡ PixelScan — Image Compressor & Decompressor")
+        self.geometry("1140x880")
+        self.minsize(1020, 760)
 
         # State variables
         self.compress_image_path: Optional[Path] = None
@@ -69,619 +69,623 @@ class ImageCompressorApp(tk.Tk):
         self.reconstructed_image_obj: Optional[Image.Image] = None
         self.decompression_stats: Optional[dict] = None
 
+        # Direct Formatter variables
+        self.formatter_image_path: Optional[Path] = None
+        self.formatter_image_obj: Optional[Image.Image] = None
+        self.formatter_preset_var = ctk.StringVar(value="webp_95")
+        self.last_formatted_path: Optional[Path] = None
+
         # Mode variable (Default to real-life Binary Smart mode for genuine small files)
-        self.string_mode_var = tk.StringVar(value=MODE_BIN_SMART)
+        self.string_mode_var = ctk.StringVar(value=MODE_BIN_SMART)
 
         # Quality variable (100 = Lossless, 85 = High Quality, 65 = Max Compression)
-        self.quality_var = tk.IntVar(value=100)
+        self.quality_var = ctk.IntVar(value=100)
 
         # JPEG Export Quality (User selectable: 95 = High Quality, 75 = Standard, 60 = Compact)
-        self.jpeg_export_quality_var = tk.IntVar(value=95)
+        self.jpeg_export_quality_var = ctk.IntVar(value=95)
 
-        self._setup_styles()
         self._build_ui()
 
-        # Check if default test image exists and pre-load it for convenience
+        # Check for test image and pre-load if present
         default_test_img = IMAGES_DIR / "ICtest.jpeg"
         if default_test_img.exists():
             self._load_compress_image(default_test_img)
-
-    def _setup_styles(self):
-        """Configures ttk styles for the modern dark theme."""
-        style = ttk.Style(self)
-        style.theme_use("clam")
-
-        style.configure(".", background=BG_DARK, foreground=FG_MAIN, font=("Segoe UI", 10))
-        style.configure("TFrame", background=BG_DARK)
-        style.configure("Panel.TFrame", background=BG_PANEL)
-        style.configure("Card.TFrame", background=BG_CARD)
-
-        # Notebook (Tabs)
-        style.configure(
-            "TNotebook",
-            background=BG_DARK,
-            borderwidth=0,
-            tabmargins=[10, 10, 10, 0]
-        )
-        style.configure(
-            "TNotebook.Tab",
-            background=BG_PANEL,
-            foreground=FG_MUTED,
-            padding=[20, 10],
-            font=("Segoe UI", 11, "bold"),
-            borderwidth=0
-        )
-        style.map(
-            "TNotebook.Tab",
-            background=[("selected", BG_CARD)],
-            foreground=[("selected", ACCENT_BLUE)]
-        )
-
-        # Buttons
-        style.configure(
-            "Primary.TButton",
-            background=ACCENT_BLUE,
-            foreground="#11111b",
-            font=("Segoe UI", 10, "bold"),
-            padding=[14, 8],
-            borderwidth=0
-        )
-        style.map("Primary.TButton", background=[("active", "#b4befe")])
-
-        style.configure(
-            "Success.TButton",
-            background=ACCENT_GREEN,
-            foreground="#11111b",
-            font=("Segoe UI", 10, "bold"),
-            padding=[14, 8],
-            borderwidth=0
-        )
-        style.map("Success.TButton", background=[("active", "#94e2d5")])
-
-        style.configure(
-            "Secondary.TButton",
-            background=BG_INPUT,
-            foreground=FG_MAIN,
-            font=("Segoe UI", 9),
-            padding=[10, 6],
-            borderwidth=0
-        )
-        style.map("Secondary.TButton", background=[("active", BORDER_COLOR)])
-
-        # Radio buttons
-        style.configure(
-            "TRadiobutton",
-            background=BG_INPUT,
-            foreground=FG_MAIN,
-            font=("Segoe UI", 9)
-        )
-        style.map(
-            "TRadiobutton",
-            background=[("active", BG_INPUT)],
-            foreground=[("selected", ACCENT_BLUE)]
-        )
-
-        # Progressbar
-        style.configure(
-            "TProgressbar",
-            troughcolor=BG_INPUT,
-            background=ACCENT_BLUE,
-            thickness=6
-        )
-
-        # Scrollbars
-        style.configure(
-            "Vertical.TScrollbar",
-            background=BG_INPUT,
-            troughcolor=BG_DARK,
-            bordercolor=BG_DARK,
-            arrowcolor=FG_MUTED,
-            relief="flat"
-        )
+            self._load_formatter_image(default_test_img)
+        else:
+            images = list(IMAGES_DIR.glob("*.jpeg")) + list(IMAGES_DIR.glob("*.jpg")) + list(IMAGES_DIR.glob("*.png"))
+            if images:
+                self._load_compress_image(images[0])
+                self._load_formatter_image(images[0])
 
     def _build_ui(self):
-        """Constructs the complete application UI."""
+        """Constructs the complete CustomTkinter application UI."""
+        # -------------------------------------------------------------
         # Top Header Bar
-        header = tk.Frame(self, bg=BG_PANEL, height=65)
+        # -------------------------------------------------------------
+        header = ctk.CTkFrame(self, corner_radius=0, fg_color=COLOR_CARD, height=65)
         header.pack(fill=tk.X, side=tk.TOP)
         header.pack_propagate(False)
 
-        title_label = tk.Label(
-            header,
+        title_box = ctk.CTkFrame(header, fg_color="transparent")
+        title_box.pack(side=tk.LEFT, padx=20, pady=10)
+
+        lbl_title = ctk.CTkLabel(
+            title_box,
             text="⚡ PixelScan Image Compressor & Decompressor",
-            font=("Segoe UI", 16, "bold"),
-            bg=BG_PANEL,
-            fg=ACCENT_BLUE
+            font=ctk.CTkFont(family="Segoe UI", size=18, weight="bold"),
+            text_color=COLOR_PRIMARY
         )
-        title_label.pack(side=tk.LEFT, padx=20, pady=10)
+        lbl_title.pack(anchor="w")
 
-        subtitle_label = tk.Label(
+        lbl_sub = ctk.CTkLabel(
+            title_box,
+            text="Real-Life Binary Compression & Lossless Pixel Deduplication Engines",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            text_color=COLOR_TEXT_MUTED
+        )
+        lbl_sub.pack(anchor="w")
+
+        # Appearance Mode Toggle on Right
+        self.theme_switch = ctk.CTkSwitch(
             header,
-            text="Row/Column Pixel Scanning • Auto-Save to Output • 5 Algorithms",
-            font=("Segoe UI", 9),
-            bg=BG_PANEL,
-            fg=FG_MUTED
+            text="Dark Mode",
+            command=self._toggle_appearance_mode,
+            onvalue="Dark",
+            offvalue="Light",
+            font=ctk.CTkFont(family="Segoe UI", size=11)
         )
-        subtitle_label.pack(side=tk.RIGHT, padx=20, pady=15)
+        self.theme_switch.select()
+        self.theme_switch.pack(side=tk.RIGHT, padx=20, pady=15)
 
-        # Notebook Tabs
-        self.notebook = ttk.Notebook(self)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=15, pady=8)
-
-        # Tab 1: Compress
-        self.compress_tab = ttk.Frame(self.notebook, style="Panel.TFrame")
-        self.notebook.add(self.compress_tab, text="  🗜️  Compress Image  ")
-        self._build_compress_tab()
-
-        # Tab 2: Decompress
-        self.decompress_tab = ttk.Frame(self.notebook, style="Panel.TFrame")
-        self.notebook.add(self.decompress_tab, text="  🔓  Decompress Image  ")
-        self._build_decompress_tab()
-
-        # Tab 3: Lossless Verifier
-        self.verifier_tab = ttk.Frame(self.notebook, style="Panel.TFrame")
-        self.notebook.add(self.verifier_tab, text="  🔍  Lossless Verifier  ")
-        self._build_verifier_tab()
-
-        # Status Bar
-        self.status_bar = tk.Label(
+        # -------------------------------------------------------------
+        # Main Tabview
+        # -------------------------------------------------------------
+        self.tabview = ctk.CTkTabview(
             self,
-            text="Ready. Load an image to begin.",
-            font=("Segoe UI", 9),
-            bg="#11111b",
-            fg=FG_MUTED,
-            anchor="w",
-            padx=15,
-            pady=4
+            corner_radius=12,
+            segmented_button_selected_color=COLOR_PRIMARY,
+            segmented_button_selected_hover_color=COLOR_PRIMARY_HOVER
         )
-        self.status_bar.pack(fill=tk.X, side=tk.BOTTOM)
+        self.tabview.pack(fill=tk.BOTH, expand=True, padx=15, pady=(10, 5))
 
-    # -------------------------------------------------------------------------
+        self.tab_compress = self.tabview.add("⚡ Compress Image")
+        self.tab_decompress = self.tabview.add("🔄 Decompress Image")
+        self.tab_verifier = self.tabview.add("🔍 Lossless Verifier")
+        self.tab_formatter = self.tabview.add("⚡ Direct Formatter")
+
+        self._build_compress_tab()
+        self._build_decompress_tab()
+        self._build_verifier_tab()
+        self._build_formatter_tab()
+
+        # -------------------------------------------------------------
+        # Bottom Status Bar
+        # -------------------------------------------------------------
+        status_bar_frame = ctk.CTkFrame(self, height=28, corner_radius=0, fg_color=COLOR_CARD)
+        status_bar_frame.pack(fill=tk.X, side=tk.BOTTOM)
+        status_bar_frame.pack_propagate(False)
+
+        self.status_bar = ctk.CTkLabel(
+            status_bar_frame,
+            text="Ready. Select an image to begin.",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color=COLOR_TEXT_MUTED,
+            anchor="w"
+        )
+        self.status_bar.pack(side=tk.LEFT, padx=15)
+
+    def _toggle_appearance_mode(self):
+        if self.theme_switch.get() == "Dark":
+            ctk.set_appearance_mode("Dark")
+        else:
+            ctk.set_appearance_mode("Light")
+
+    # =========================================================================
     # TAB 1: COMPRESS
-    # -------------------------------------------------------------------------
+    # =========================================================================
     def _build_compress_tab(self):
-        pane = tk.PanedWindow(self.compress_tab, orient=tk.HORIZONTAL, bg=BG_DARK, sashwidth=6)
-        pane.pack(fill=tk.BOTH, expand=True, padx=10, pady=8)
+        parent = self.tab_compress
+
+        # Horizontal Split: Left (Image & Preview), Right (Scrollable Options & Stats)
+        container = ctk.CTkFrame(parent, fg_color="transparent")
+        container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # Left Column: Image Selection & Preview
-        left_frame = tk.Frame(pane, bg=BG_CARD, padx=15, pady=12)
-        pane.add(left_frame, minsize=370)
+        left_frame = ctk.CTkFrame(container, corner_radius=10, fg_color=COLOR_CARD, width=360)
+        left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10), pady=5)
+        left_frame.pack_propagate(False)
 
-        lbl_step1 = tk.Label(left_frame, text="Step 1: Select Input Image", font=("Segoe UI", 12, "bold"), bg=BG_CARD, fg=ACCENT_BLUE)
-        lbl_step1.pack(anchor="w")
+        lbl_step1 = ctk.CTkLabel(
+            left_frame,
+            text="Step 1: Select Input Image",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color=COLOR_PRIMARY
+        )
+        lbl_step1.pack(anchor="w", padx=15, pady=(15, 6))
 
-        btn_browse = ttk.Button(left_frame, text="📂 Browse Image...", style="Secondary.TButton", command=self._browse_compress_image)
-        btn_browse.pack(fill=tk.X, pady=(8, 4))
+        btn_browse = ctk.CTkButton(
+            left_frame,
+            text="📂 Browse Image...",
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            command=self._browse_compress_image
+        )
+        btn_browse.pack(fill=tk.X, padx=15, pady=(0, 6))
 
-        self.lbl_comp_file_path = tk.Label(left_frame, text="No image selected", font=("Segoe UI", 9), bg=BG_CARD, fg=FG_MUTED, wraplength=340, justify="left")
-        self.lbl_comp_file_path.pack(anchor="w", pady=(0, 8))
+        self.lbl_comp_file_path = ctk.CTkLabel(
+            left_frame,
+            text="No image selected",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color=COLOR_TEXT_MUTED,
+            wraplength=320,
+            justify="left"
+        )
+        self.lbl_comp_file_path.pack(anchor="w", padx=15, pady=(0, 6))
 
-        # Canvas for Image Preview
-        self.comp_preview_canvas = tk.Canvas(left_frame, bg=BG_INPUT, width=310, height=310, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        self.comp_preview_canvas.pack(pady=4)
-        self.comp_preview_canvas.create_text(155, 155, text="Image Preview", fill=FG_SUBTLE, font=("Segoe UI", 11))
+        # Preview Container
+        preview_box = ctk.CTkFrame(left_frame, corner_radius=8, fg_color=COLOR_CARD_SUB, height=310)
+        preview_box.pack(fill=tk.X, padx=15, pady=4)
+        preview_box.pack_propagate(False)
 
-        self.lbl_comp_dims = tk.Label(left_frame, text="Dimensions: - | Size: - | Mode: -", font=("Segoe UI", 9), bg=BG_CARD, fg=FG_MAIN)
-        self.lbl_comp_dims.pack(pady=4)
+        self.lbl_comp_preview = ctk.CTkLabel(preview_box, text="Image Preview", text_color=COLOR_TEXT_MUTED)
+        self.lbl_comp_preview.pack(expand=True)
 
-        # Open Output Folder Button on Left
-        btn_open_out = ttk.Button(left_frame, text="📁 Open Output Folder", style="Secondary.TButton", command=self._open_output_folder)
-        btn_open_out.pack(fill=tk.X, pady=(10, 0))
+        self.lbl_comp_dims = ctk.CTkLabel(
+            left_frame,
+            text="Dimensions: - | Size: - | Mode: -",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color=COLOR_TEXT_MUTED
+        )
+        self.lbl_comp_dims.pack(padx=15, pady=(6, 10))
 
-        # Right Column: Scrollable Container for Configuration, Scan & Actions
-        right_container = tk.Frame(pane, bg=BG_CARD)
-        pane.add(right_container, minsize=540)
+        btn_open_out = ctk.CTkButton(
+            left_frame,
+            text="📁 Open Output Folder",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
+            command=self._open_output_folder
+        )
+        btn_open_out.pack(fill=tk.X, padx=15, pady=(0, 15))
 
-        right_canvas = tk.Canvas(right_container, bg=BG_CARD, highlightthickness=0)
-        right_scrollbar = ttk.Scrollbar(right_container, orient="vertical", command=right_canvas.yview)
-        right_canvas.configure(yscrollcommand=right_scrollbar.set)
+        # Right Column: Built-in CTkScrollableFrame
+        right_scroll = ctk.CTkScrollableFrame(container, corner_radius=10, fg_color=COLOR_CARD)
+        right_scroll.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=5)
 
-        right_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        right_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Step 2: Choose Algorithm
+        lbl_step2 = ctk.CTkLabel(
+            right_scroll,
+            text="Step 2: Choose Compression Algorithm",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color=COLOR_PRIMARY
+        )
+        lbl_step2.pack(anchor="w", padx=10, pady=(10, 4))
 
-        right_frame = tk.Frame(right_canvas, bg=BG_CARD, padx=15, pady=12)
-        right_canvas_win = right_canvas.create_window((0, 0), window=right_frame, anchor="nw")
+        mode_box = ctk.CTkFrame(right_scroll, corner_radius=8, fg_color=COLOR_CARD_SUB)
+        mode_box.pack(fill=tk.X, padx=10, pady=(0, 8))
 
-        def _configure_right_frame(event):
-            right_canvas.configure(scrollregion=right_canvas.bbox("all"))
+        # Real-Life Binary Section
+        lbl_bin_hdr = ctk.CTkLabel(
+            mode_box,
+            text="🚀 REAL-LIFE BINARY ENGINE (NO TEXT BLOAT — SMALLEST FILES):",
+            font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
+            text_color=COLOR_SUCCESS
+        )
+        lbl_bin_hdr.pack(anchor="w", padx=12, pady=(8, 2))
 
-        def _configure_right_canvas(event):
-            right_canvas.itemconfig(right_canvas_win, width=event.width)
-
-        right_frame.bind("<Configure>", _configure_right_frame)
-        right_canvas.bind("<Configure>", _configure_right_canvas)
-
-        def _on_compress_mousewheel(event):
-            right_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-        right_container.bind("<Enter>", lambda e: right_canvas.bind_all("<MouseWheel>", _on_compress_mousewheel))
-        right_container.bind("<Leave>", lambda e: right_canvas.unbind_all("<MouseWheel>"))
-
-        # Step 2: Serialization Mode Options
-        lbl_step2 = tk.Label(right_frame, text="Step 2: Choose Compression Algorithm", font=("Segoe UI", 12, "bold"), bg=BG_CARD, fg=ACCENT_BLUE)
-        lbl_step2.pack(anchor="w")
-
-        mode_frame = tk.Frame(right_frame, bg=BG_INPUT, padx=10, pady=6, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        mode_frame.pack(fill=tk.X, pady=(4, 8))
-
-        # --- Real-Life Binary Section ---
-        lbl_bin_hdr = tk.Label(mode_frame, text="🚀 REAL-LIFE BINARY ENGINE (NO TEXT BLOAT — SMALLEST FILES):", font=("Segoe UI", 8, "bold"), bg=BG_INPUT, fg=ACCENT_GREEN)
-        lbl_bin_hdr.pack(anchor="w", pady=(2, 1))
-
-        rb_bin_smart = ttk.Radiobutton(
-            mode_frame,
+        rb_bin_smart = ctk.CTkRadioButton(
+            mode_box,
             text="🚀 Real-Life Binary Smart Mode (Smallest! ~11-20 KB, Beats JPEG!)\n   Uses real frequency quantization directly in binary. Bypasses text strings completely.",
             value=MODE_BIN_SMART,
-            variable=self.string_mode_var
+            variable=self.string_mode_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
         )
-        rb_bin_smart.pack(anchor="w", pady=2)
+        rb_bin_smart.pack(anchor="w", padx=12, pady=3)
 
-        rb_bin_lossless = ttk.Radiobutton(
-            mode_frame,
+        rb_bin_lossless = ctk.CTkRadioButton(
+            mode_box,
             text="🛡️ Real-Life Binary Lossless Mode (No text bloat, 100% exact pixels: ~174 KB)\n   Encodes raw bytes directly with 2D DPCM prediction. Zero text inflation.",
             value=MODE_BIN_LOSSLESS,
-            variable=self.string_mode_var
+            variable=self.string_mode_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
         )
-        rb_bin_lossless.pack(anchor="w", pady=2)
+        rb_bin_lossless.pack(anchor="w", padx=12, pady=3)
 
-        # --- Text String Section ---
-        lbl_txt_hdr = tk.Label(mode_frame, text="📝 TEXT-BASED STRING ENGINES (HUMAN-READABLE STRINGS):", font=("Segoe UI", 8, "bold"), bg=BG_INPUT, fg=ACCENT_BLUE)
-        lbl_txt_hdr.pack(anchor="w", pady=(6, 1))
-
-        # 1. DELTA
-        rb_delta = ttk.Radiobutton(
-            mode_frame,
-            text="⚡ Delta-RLE String Mode — Stores pixel differences (dr,dg,db)",
-            value=MODE_DELTA,
-            variable=self.string_mode_var
+        # Text-Based Section
+        lbl_txt_hdr = ctk.CTkLabel(
+            mode_box,
+            text="📝 TEXT-BASED STRING ENGINES (HUMAN-READABLE STRINGS):",
+            font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
+            text_color=COLOR_PRIMARY
         )
-        rb_delta.pack(anchor="w", pady=1)
+        lbl_txt_hdr.pack(anchor="w", padx=12, pady=(10, 2))
 
-        # 2. PATTERN (User Idea)
-        rb_pattern = ttk.Radiobutton(
-            mode_frame,
-            text="🧩 Pattern Deduplication Mode (Your Idea!) — Saves repeated patterns once, places on decompress",
-            value=MODE_PATTERN,
-            variable=self.string_mode_var
+        text_modes = [
+            (MODE_DELTA, "⚡ Delta-RLE String Mode — Stores pixel differences (dr,dg,db)"),
+            (MODE_PATTERN, "🧩 Pattern Deduplication Mode (Your Idea!) — Saves repeated patterns once, places on decompress"),
+            (MODE_PALETTE, "🎨 Palette String Mode — Unique color index table (0,1,0,2)"),
+            (MODE_HEX, "🔢 HEX String Mode — 6-char hex (1B1725), removes all commas"),
+            (MODE_RLE, "🟢 Standard RGB RLE Mode — Run-length encodes identical pixels as count*r,g,b"),
+            (MODE_RAW, "🔵 Raw Row-Column Mode — Full explicit pixel list: R0:r,g,b;r,g,b;...")
+        ]
+        for val, txt in text_modes:
+            rb = ctk.CTkRadioButton(
+                mode_box,
+                text=txt,
+                value=val,
+                variable=self.string_mode_var,
+                font=ctk.CTkFont(family="Segoe UI", size=11)
+            )
+            rb.pack(anchor="w", padx=12, pady=2)
+
+        # Compression Target / Quality
+        qual_frame = ctk.CTkFrame(right_scroll, fg_color="transparent")
+        qual_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+
+        lbl_qual = ctk.CTkLabel(
+            qual_frame,
+            text="Compression Target:",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold")
         )
-        rb_pattern.pack(anchor="w", pady=1)
-
-        # 3. PALETTE
-        rb_palette = ttk.Radiobutton(
-            mode_frame,
-            text="🎨 Palette String Mode — Unique color index table (0,1,0,2)",
-            value=MODE_PALETTE,
-            variable=self.string_mode_var
-        )
-        rb_palette.pack(anchor="w", pady=1)
-
-        # 4. HEX
-        rb_hex = ttk.Radiobutton(
-            mode_frame,
-            text="🔢 HEX String Mode — 6-char hex (1B1725), removes all commas",
-            value=MODE_HEX,
-            variable=self.string_mode_var
-        )
-        rb_hex.pack(anchor="w", pady=1)
-
-        # 5. RLE
-        rb_rle = ttk.Radiobutton(
-            mode_frame,
-            text="🟢 Standard RGB RLE Mode — Run-length encodes identical pixels as count*r,g,b",
-            value=MODE_RLE,
-            variable=self.string_mode_var
-        )
-        rb_rle.pack(anchor="w", pady=1)
-
-        # 6. RAW
-        rb_raw = ttk.Radiobutton(
-            mode_frame,
-            text="🔵 Raw Row-Column Mode — Full explicit pixel list: R0:r,g,b;r,g,b;...",
-            value=MODE_RAW,
-            variable=self.string_mode_var
-        )
-        rb_raw.pack(anchor="w", pady=1)
-
-        # Quality / Compression Preset
-        qual_frame = tk.Frame(right_frame, bg=BG_CARD)
-        qual_frame.pack(fill=tk.X, pady=(2, 8))
-
-        lbl_qual = tk.Label(qual_frame, text="Compression Target:", font=("Segoe UI", 9, "bold"), bg=BG_CARD, fg=FG_MAIN)
         lbl_qual.pack(side=tk.LEFT, padx=(0, 10))
 
-        rb_q100 = ttk.Radiobutton(qual_frame, text="100% Lossless (Exact)", value=100, variable=self.quality_var)
-        rb_q100.pack(side=tk.LEFT, padx=5)
+        rb_q100 = ctk.CTkRadioButton(qual_frame, text="100% Lossless (Exact)", value=100, variable=self.quality_var, font=ctk.CTkFont(family="Segoe UI", size=11))
+        rb_q100.pack(side=tk.LEFT, padx=6)
 
-        rb_q85 = ttk.Radiobutton(qual_frame, text="85% High Quality (Smaller)", value=85, variable=self.quality_var)
-        rb_q85.pack(side=tk.LEFT, padx=5)
+        rb_q85 = ctk.CTkRadioButton(qual_frame, text="85% High Quality (Smaller)", value=85, variable=self.quality_var, font=ctk.CTkFont(family="Segoe UI", size=11))
+        rb_q85.pack(side=tk.LEFT, padx=6)
 
-        rb_q65 = ttk.Radiobutton(qual_frame, text="65% Max Compression (Beats JPEG)", value=65, variable=self.quality_var)
-        rb_q65.pack(side=tk.LEFT, padx=5)
+        rb_q65 = ctk.CTkRadioButton(qual_frame, text="65% Max Compression", value=65, variable=self.quality_var, font=ctk.CTkFont(family="Segoe UI", size=11))
+        rb_q65.pack(side=tk.LEFT, padx=6)
 
-        # Step 3: Compress Button & Progress
-        lbl_step3 = tk.Label(right_frame, text="Step 3: Scan Pixels & Compress (Auto-saves to output/)", font=("Segoe UI", 12, "bold"), bg=BG_CARD, fg=ACCENT_BLUE)
-        lbl_step3.pack(anchor="w")
+        # Step 3: Scan & Compress
+        lbl_step3 = ctk.CTkLabel(
+            right_scroll,
+            text="Step 3: Scan Pixels & Compress (Auto-saves to output/)",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color=COLOR_PRIMARY
+        )
+        lbl_step3.pack(anchor="w", padx=10, pady=(4, 4))
 
-        btn_row = tk.Frame(right_frame, bg=BG_CARD)
-        btn_row.pack(fill=tk.X, pady=4)
+        action_row = ctk.CTkFrame(right_scroll, fg_color="transparent")
+        action_row.pack(fill=tk.X, padx=10, pady=(0, 6))
 
-        self.btn_run_compress = ttk.Button(
-            btn_row,
+        self.btn_run_compress = ctk.CTkButton(
+            action_row,
             text="⚡ Compress Image",
-            style="Primary.TButton",
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            height=36,
             command=self._start_compress_thread
         )
         self.btn_run_compress.pack(side=tk.LEFT, padx=(0, 10))
 
-        self.comp_progressbar = ttk.Progressbar(btn_row, mode="indeterminate", style="TProgressbar")
+        self.comp_progressbar = ctk.CTkProgressBar(action_row, mode="indeterminate", width=220)
 
-        # Stats Panel
-        self.comp_stats_frame = tk.Frame(right_frame, bg=BG_INPUT, padx=12, pady=6, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        self.comp_stats_frame.pack(fill=tk.X, pady=(2, 6))
+        # Stats Card
+        self.comp_stats_box = ctk.CTkFrame(right_scroll, corner_radius=8, fg_color=COLOR_CARD_SUB)
+        self.comp_stats_box.pack(fill=tk.X, padx=10, pady=(0, 8))
 
-        self.lbl_comp_stats = tk.Label(
-            self.comp_stats_frame,
+        self.lbl_comp_stats = ctk.CTkLabel(
+            self.comp_stats_box,
             text="Compression statistics will appear here after scanning.",
-            font=("Consolas", 9),
-            bg=BG_INPUT,
-            fg=FG_MUTED,
+            font=ctk.CTkFont(family="Consolas", size=11),
+            text_color=COLOR_TEXT_MUTED,
             justify="left",
             anchor="w"
         )
-        self.lbl_comp_stats.pack(anchor="w")
+        self.lbl_comp_stats.pack(anchor="w", padx=12, pady=10)
 
-        # Auto-saved notification banner
-        self.lbl_autosave_notice = tk.Label(
-            right_frame,
-            text="💡 Tip: Clicking 'Compress Image' automatically saves the .icomp file directly to the output/ folder.",
-            font=("Segoe UI", 8, "italic"),
-            bg=BG_CARD,
-            fg=FG_MUTED,
+        self.lbl_autosave_notice = ctk.CTkLabel(
+            right_scroll,
+            text="",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color=COLOR_SUCCESS,
             anchor="w"
         )
-        self.lbl_autosave_notice.pack(anchor="w", pady=(0, 4))
+        self.lbl_autosave_notice.pack(anchor="w", padx=10, pady=(0, 4))
 
         # Pixel String Preview Box
-        lbl_str_preview = tk.Label(right_frame, text="Pixel String Snippet (Row/Column Structure):", font=("Segoe UI", 10, "bold"), bg=BG_CARD, fg=FG_MAIN)
-        lbl_str_preview.pack(anchor="w", pady=(2, 2))
-
-        self.txt_string_preview = tk.Text(
-            right_frame,
-            height=4,
-            bg="#11111b",
-            fg=ACCENT_GREEN,
-            insertbackground=FG_MAIN,
-            font=("Consolas", 8),
-            wrap=tk.NONE,
-            highlightthickness=1,
-            highlightbackground=BORDER_COLOR
+        lbl_str_preview = ctk.CTkLabel(
+            right_scroll,
+            text="Pixel String Snippet (Row/Column Structure):",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold")
         )
-        self.txt_string_preview.pack(fill=tk.BOTH, expand=True, pady=(0, 6))
+        lbl_str_preview.pack(anchor="w", padx=10, pady=(2, 2))
+
+        self.txt_string_preview = ctk.CTkTextbox(
+            right_scroll,
+            height=90,
+            font=ctk.CTkFont(family="Consolas", size=10),
+            fg_color="#11111b",
+            text_color=COLOR_SUCCESS
+        )
+        self.txt_string_preview.pack(fill=tk.X, padx=10, pady=(0, 8))
 
         # Step 4: Export Options
-        lbl_step4 = tk.Label(right_frame, text="Step 4: Manual Save / Export", font=("Segoe UI", 12, "bold"), bg=BG_CARD, fg=ACCENT_BLUE)
-        lbl_step4.pack(anchor="w")
+        lbl_step4 = ctk.CTkLabel(
+            right_scroll,
+            text="Step 4: Manual Save / Export",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color=COLOR_PRIMARY
+        )
+        lbl_step4.pack(anchor="w", padx=10, pady=(4, 4))
 
-        export_row = tk.Frame(right_frame, bg=BG_CARD)
-        export_row.pack(fill=tk.X, pady=(2, 0))
+        export_row = ctk.CTkFrame(right_scroll, fg_color="transparent")
+        export_row.pack(fill=tk.X, padx=10, pady=(0, 15))
 
-        self.btn_save_icomp = ttk.Button(
+        self.btn_save_icomp = ctk.CTkButton(
             export_row,
             text="💾 Save Copy As (.icomp)",
-            style="Success.TButton",
-            state=tk.DISABLED,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color=COLOR_SUCCESS,
+            hover_color=COLOR_SUCCESS_HOVER,
+            state="disabled",
             command=self._save_compressed_file
         )
         self.btn_save_icomp.pack(side=tk.LEFT, padx=(0, 8))
 
-        self.btn_save_txt = ttk.Button(
+        self.btn_save_txt = ctk.CTkButton(
             export_row,
             text="📄 Save Pixel String (.txt)",
-            style="Secondary.TButton",
-            state=tk.DISABLED,
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
+            state="disabled",
             command=self._save_pixel_string_file
         )
         self.btn_save_txt.pack(side=tk.LEFT, padx=(0, 8))
 
-        btn_open_folder = ttk.Button(
+        btn_open_folder = ctk.CTkButton(
             export_row,
             text="📁 Open output/ Folder",
-            style="Secondary.TButton",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
             command=self._open_output_folder
         )
         btn_open_folder.pack(side=tk.LEFT)
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # TAB 2: DECOMPRESS
-    # -------------------------------------------------------------------------
+    # =========================================================================
     def _build_decompress_tab(self):
-        pane = tk.PanedWindow(self.decompress_tab, orient=tk.HORIZONTAL, bg=BG_DARK, sashwidth=6)
-        pane.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        parent = self.tab_decompress
 
-        # Left Column: Scrollable File Selection & Actions
-        left_container = tk.Frame(pane, bg=BG_CARD)
-        pane.add(left_container, minsize=400)
+        container = ctk.CTkFrame(parent, fg_color="transparent")
+        container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        left_canvas = tk.Canvas(left_container, bg=BG_CARD, highlightthickness=0)
-        left_scrollbar = ttk.Scrollbar(left_container, orient="vertical", command=left_canvas.yview)
-        left_canvas.configure(yscrollcommand=left_scrollbar.set)
+        # Left Column: CTkScrollableFrame for controls
+        left_scroll = ctk.CTkScrollableFrame(container, corner_radius=10, fg_color=COLOR_CARD, width=440)
+        left_scroll.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10), pady=5)
 
-        left_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        left_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        lbl_decomp_step1 = ctk.CTkLabel(
+            left_scroll,
+            text="Step 1: Select Compressed File",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color="#cba6f7"
+        )
+        lbl_decomp_step1.pack(anchor="w", padx=10, pady=(10, 4))
 
-        left_frame = tk.Frame(left_canvas, bg=BG_CARD, padx=15, pady=15)
-        left_canvas_win = left_canvas.create_window((0, 0), window=left_frame, anchor="nw")
+        btn_browse_decomp = ctk.CTkButton(
+            left_scroll,
+            text="📂 Browse .icomp File...",
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
+            command=self._browse_decompress_file
+        )
+        btn_browse_decomp.pack(fill=tk.X, padx=10, pady=(0, 6))
 
-        def _configure_left_frame(event):
-            left_canvas.configure(scrollregion=left_canvas.bbox("all"))
+        self.lbl_decomp_file_path = ctk.CTkLabel(
+            left_scroll,
+            text="No .icomp file selected",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color=COLOR_TEXT_MUTED,
+            wraplength=400,
+            justify="left"
+        )
+        self.lbl_decomp_file_path.pack(anchor="w", padx=10, pady=(0, 10))
 
-        def _configure_left_canvas(event):
-            left_canvas.itemconfig(left_canvas_win, width=event.width)
+        # Step 2: Decompress & Reconstruct
+        lbl_decomp_step2 = ctk.CTkLabel(
+            left_scroll,
+            text="Step 2: Decompress & Reconstruct",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color="#cba6f7"
+        )
+        lbl_decomp_step2.pack(anchor="w", padx=10, pady=(4, 4))
 
-        left_frame.bind("<Configure>", _configure_left_frame)
-        left_canvas.bind("<Configure>", _configure_left_canvas)
-
-        def _on_decomp_mousewheel(event):
-            left_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-        left_container.bind("<Enter>", lambda e: left_canvas.bind_all("<MouseWheel>", _on_decomp_mousewheel))
-        left_container.bind("<Leave>", lambda e: left_canvas.unbind_all("<MouseWheel>"))
-
-        lbl_decomp_step1 = tk.Label(left_frame, text="Step 1: Select Compressed File", font=("Segoe UI", 12, "bold"), bg=BG_CARD, fg=ACCENT_PURPLE)
-        lbl_decomp_step1.pack(anchor="w")
-
-        btn_browse_decomp = ttk.Button(left_frame, text="📂 Browse .icomp File...", style="Secondary.TButton", command=self._browse_decompress_file)
-        btn_browse_decomp.pack(fill=tk.X, pady=(10, 5))
-
-        self.lbl_decomp_file_path = tk.Label(left_frame, text="No .icomp file selected", font=("Segoe UI", 9), bg=BG_CARD, fg=FG_MUTED, wraplength=350, justify="left")
-        self.lbl_decomp_file_path.pack(anchor="w", pady=(0, 15))
-
-        lbl_decomp_step2 = tk.Label(left_frame, text="Step 2: Decompress & Reconstruct", font=("Segoe UI", 12, "bold"), bg=BG_CARD, fg=ACCENT_PURPLE)
-        lbl_decomp_step2.pack(anchor="w")
-
-        self.btn_run_decompress = ttk.Button(
-            left_frame,
+        self.btn_run_decompress = ctk.CTkButton(
+            left_scroll,
             text="🔄 Decompress & Reconstruct Image",
-            style="Primary.TButton",
-            state=tk.DISABLED,
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            fg_color="#8b5cf6",
+            hover_color="#7c3aed",
+            state="disabled",
+            height=36,
             command=self._start_decompress_thread
         )
-        self.btn_run_decompress.pack(fill=tk.X, pady=10)
+        self.btn_run_decompress.pack(fill=tk.X, padx=10, pady=(0, 6))
 
-        self.decomp_progressbar = ttk.Progressbar(left_frame, mode="indeterminate", style="TProgressbar")
+        self.decomp_progressbar = ctk.CTkProgressBar(left_scroll, mode="indeterminate")
 
-        # Decompression Stats
-        self.decomp_stats_frame = tk.Frame(left_frame, bg=BG_INPUT, padx=12, pady=10, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        self.decomp_stats_frame.pack(fill=tk.X, pady=10)
+        # Decompression Stats Card
+        self.decomp_stats_frame = ctk.CTkFrame(left_scroll, corner_radius=8, fg_color=COLOR_CARD_SUB)
+        self.decomp_stats_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
 
-        self.lbl_decomp_stats = tk.Label(
+        self.lbl_decomp_stats = ctk.CTkLabel(
             self.decomp_stats_frame,
             text="Reconstruction details will appear here.",
-            font=("Consolas", 9),
-            bg=BG_INPUT,
-            fg=FG_MUTED,
+            font=ctk.CTkFont(family="Consolas", size=11),
+            text_color=COLOR_TEXT_MUTED,
             justify="left",
             anchor="w"
         )
-        self.lbl_decomp_stats.pack(anchor="w")
+        self.lbl_decomp_stats.pack(anchor="w", padx=12, pady=10)
 
-        # Save Restored Image
-        lbl_decomp_step3 = tk.Label(left_frame, text="Step 3: Save Restored Image", font=("Segoe UI", 12, "bold"), bg=BG_CARD, fg=ACCENT_PURPLE)
-        lbl_decomp_step3.pack(anchor="w", pady=(10, 5))
+        # Step 3: Save Restored Image
+        lbl_decomp_step3 = ctk.CTkLabel(
+            left_scroll,
+            text="Step 3: Save Restored Image",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color="#cba6f7"
+        )
+        lbl_decomp_step3.pack(anchor="w", padx=10, pady=(4, 4))
 
-        self.btn_save_restored_png = ttk.Button(
-            left_frame,
+        self.btn_save_restored_png = ctk.CTkButton(
+            left_scroll,
             text="💾 Save as Lossless PNG (Exact Pixels, ~4 MB)",
-            style="Success.TButton",
-            state=tk.DISABLED,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color=COLOR_SUCCESS,
+            hover_color=COLOR_SUCCESS_HOVER,
+            state="disabled",
             command=lambda: self._save_restored_image(format_ext=".png")
         )
-        self.btn_save_restored_png.pack(fill=tk.X, pady=(4, 6))
+        self.btn_save_restored_png.pack(fill=tk.X, padx=10, pady=(0, 6))
 
-        self.btn_save_restored_webp = ttk.Button(
-            left_frame,
+        self.btn_save_restored_webp = ctk.CTkButton(
+            left_scroll,
             text="🚀 Save as Modern WebP (~560 KB, Best Size & Quality)",
-            style="Primary.TButton",
-            state=tk.DISABLED,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            state="disabled",
             command=lambda: self._save_restored_image(format_ext=".webp")
         )
-        self.btn_save_restored_webp.pack(fill=tk.X, pady=(0, 8))
+        self.btn_save_restored_webp.pack(fill=tk.X, padx=10, pady=(0, 8))
 
-        # JPEG Export Quality Selection Box
-        jpeg_box = tk.Frame(left_frame, bg=BG_INPUT, padx=10, pady=6, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        jpeg_box.pack(fill=tk.X, pady=(0, 6))
+        # JPEG Quality Choice Frame
+        jpeg_box = ctk.CTkFrame(left_scroll, corner_radius=8, fg_color=COLOR_CARD_SUB)
+        jpeg_box.pack(fill=tk.X, padx=10, pady=(0, 8))
 
-        lbl_jpeg_qual = tk.Label(jpeg_box, text="Choose JPEG Export Quality:", font=("Segoe UI", 9, "bold"), bg=BG_INPUT, fg=FG_MAIN)
-        lbl_jpeg_qual.pack(anchor="w", pady=(0, 3))
+        lbl_jpeg_qual = ctk.CTkLabel(
+            jpeg_box,
+            text="Choose JPEG Export Quality:",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold")
+        )
+        lbl_jpeg_qual.pack(anchor="w", padx=12, pady=(6, 3))
 
-        rb_jpeg_high = ttk.Radiobutton(
+        rb_jpeg_high = ctk.CTkRadioButton(
             jpeg_box,
             text="⭐ High Quality 95% (~914 KB, Matches Camera)",
             value=95,
-            variable=self.jpeg_export_quality_var
+            variable=self.jpeg_export_quality_var,
+            font=ctk.CTkFont(family="Segoe UI", size=10)
         )
-        rb_jpeg_high.pack(anchor="w", pady=1)
+        rb_jpeg_high.pack(anchor="w", padx=12, pady=2)
 
-        rb_jpeg_std = ttk.Radiobutton(
+        rb_jpeg_std = ctk.CTkRadioButton(
             jpeg_box,
             text="⚡ Standard 75% (~187 KB, Compact)",
             value=75,
-            variable=self.jpeg_export_quality_var
+            variable=self.jpeg_export_quality_var,
+            font=ctk.CTkFont(family="Segoe UI", size=10)
         )
-        rb_jpeg_std.pack(anchor="w", pady=1)
+        rb_jpeg_std.pack(anchor="w", padx=12, pady=2)
 
-        rb_jpeg_small = ttk.Radiobutton(
+        rb_jpeg_small = ctk.CTkRadioButton(
             jpeg_box,
             text="📦 Small 60% (~130 KB, Max Compression)",
             value=60,
-            variable=self.jpeg_export_quality_var
+            variable=self.jpeg_export_quality_var,
+            font=ctk.CTkFont(family="Segoe UI", size=10)
         )
-        rb_jpeg_small.pack(anchor="w", pady=1)
+        rb_jpeg_small.pack(anchor="w", padx=12, pady=(2, 6))
 
-        self.btn_save_restored_jpeg = ttk.Button(
-            left_frame,
+        self.btn_save_restored_jpeg = ctk.CTkButton(
+            left_scroll,
             text="💾 Save as JPEG (Using Selected Quality)",
-            style="Secondary.TButton",
-            state=tk.DISABLED,
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
+            state="disabled",
             command=lambda: self._save_restored_image(format_ext=".jpeg")
         )
-        self.btn_save_restored_jpeg.pack(fill=tk.X, pady=(0, 10))
+        self.btn_save_restored_jpeg.pack(fill=tk.X, padx=10, pady=(0, 15))
 
         # Right Column: Reconstructed Image Preview
-        right_frame = tk.Frame(pane, bg=BG_CARD, padx=15, pady=15)
-        pane.add(right_frame, minsize=420)
+        right_frame = ctk.CTkFrame(container, corner_radius=10, fg_color=COLOR_CARD)
+        right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=5)
 
-        lbl_recon_title = tk.Label(right_frame, text="Reconstructed Image Preview", font=("Segoe UI", 12, "bold"), bg=BG_CARD, fg=ACCENT_GREEN)
-        lbl_recon_title.pack(anchor="w")
+        lbl_recon_title = ctk.CTkLabel(
+            right_frame,
+            text="Reconstructed Image Preview",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color=COLOR_SUCCESS
+        )
+        lbl_recon_title.pack(anchor="w", padx=15, pady=(15, 6))
 
-        self.decomp_preview_canvas = tk.Canvas(right_frame, bg=BG_INPUT, width=380, height=380, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        self.decomp_preview_canvas.pack(pady=10)
-        self.decomp_preview_canvas.create_text(190, 190, text="Decompressed Image Preview", fill=FG_SUBTLE, font=("Segoe UI", 11))
+        recon_box = ctk.CTkFrame(right_frame, corner_radius=8, fg_color=COLOR_CARD_SUB)
+        recon_box.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 10))
 
-        self.lbl_recon_dims = tk.Label(right_frame, text="Dimensions: - | Total Pixels: -", font=("Segoe UI", 10), bg=BG_CARD, fg=FG_MAIN)
-        self.lbl_recon_dims.pack(pady=5)
+        self.lbl_decomp_preview = ctk.CTkLabel(recon_box, text="Decompressed Image Preview", text_color=COLOR_TEXT_MUTED)
+        self.lbl_decomp_preview.pack(expand=True)
 
-    # -------------------------------------------------------------------------
+        self.lbl_recon_dims = ctk.CTkLabel(
+            right_frame,
+            text="Dimensions: - | Total Pixels: -",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            text_color=COLOR_TEXT_MUTED
+        )
+        self.lbl_recon_dims.pack(padx=15, pady=(0, 15))
+
+    # =========================================================================
     # TAB 3: LOSSLESS VERIFIER
-    # -------------------------------------------------------------------------
+    # =========================================================================
     def _build_verifier_tab(self):
-        container = tk.Frame(self.verifier_tab, bg=BG_CARD, padx=25, pady=20)
-        container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        parent = self.tab_verifier
 
-        title = tk.Label(container, text="🔍 Lossless Pixel-for-Pixel Verifier", font=("Segoe UI", 14, "bold"), bg=BG_CARD, fg=ACCENT_YELLOW)
-        title.pack(anchor="w")
+        container = ctk.CTkFrame(parent, corner_radius=10, fg_color=COLOR_CARD)
+        container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        desc = tk.Label(
+        title = ctk.CTkLabel(
+            container,
+            text="🔍 Lossless Pixel-for-Pixel Verifier",
+            font=ctk.CTkFont(family="Segoe UI", size=16, weight="bold"),
+            text_color="#f9e2af"
+        )
+        title.pack(anchor="w", padx=20, pady=(20, 4))
+
+        desc = ctk.CTkLabel(
             container,
             text="Verifies that the reconstructed image matches the original image with 100% precision (0 mismatched pixels).",
-            font=("Segoe UI", 10),
-            bg=BG_CARD,
-            fg=FG_MUTED
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            text_color=COLOR_TEXT_MUTED
         )
-        desc.pack(anchor="w", pady=(4, 15))
+        desc.pack(anchor="w", padx=20, pady=(0, 15))
 
-        self.btn_verify = ttk.Button(container, text="🔬 Run Verification On Current Images", style="Primary.TButton", command=self._start_verification_thread)
-        self.btn_verify.pack(anchor="w", pady=(0, 10))
+        self.btn_verify = ctk.CTkButton(
+            container,
+            text="🔬 Run Verification On Current Images",
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            fg_color=COLOR_PRIMARY,
+            hover_color=COLOR_PRIMARY_HOVER,
+            height=36,
+            command=self._start_verification_thread
+        )
+        self.btn_verify.pack(anchor="w", padx=20, pady=(0, 10))
 
-        self.verifier_progressbar = ttk.Progressbar(container, mode="indeterminate", style="TProgressbar")
+        self.verifier_progressbar = ctk.CTkProgressBar(container, mode="indeterminate", width=300)
 
-        self.verifier_results_frame = tk.Frame(container, bg=BG_INPUT, padx=20, pady=15, highlightthickness=1, highlightbackground=BORDER_COLOR)
-        self.verifier_results_frame.pack(fill=tk.BOTH, expand=True)
+        self.verifier_results_frame = ctk.CTkFrame(container, corner_radius=8, fg_color=COLOR_CARD_SUB)
+        self.verifier_results_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 20))
 
-        self.lbl_verifier_output = tk.Label(
+        self.lbl_verifier_output = ctk.CTkLabel(
             self.verifier_results_frame,
             text="Compress an image and decompress it, then click 'Run Verification' to check lossless fidelity.",
-            font=("Consolas", 10),
-            bg=BG_INPUT,
-            fg=FG_MAIN,
+            font=ctk.CTkFont(family="Consolas", size=11),
+            text_color=COLOR_TEXT_MUTED,
             justify="left",
             anchor="nw"
         )
-        self.lbl_verifier_output.pack(fill=tk.BOTH, expand=True)
+        self.lbl_verifier_output.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # COMPRESS EVENT HANDLERS
-    # -------------------------------------------------------------------------
+    # =========================================================================
     def _browse_compress_image(self):
         initial_dir = IMAGES_DIR if IMAGES_DIR.exists() else Path.cwd()
         file_path = filedialog.askopenfilename(
@@ -701,11 +705,15 @@ class ImageCompressorApp(tk.Tk):
             w, h = self.compress_image_obj.size
             mode = self.compress_image_obj.mode
 
-            self.lbl_comp_file_path.config(text=f"Selected: {path.name} ({path.parent})")
-            self.lbl_comp_dims.config(text=f"Dimensions: {w}x{h} | Size: {file_size_kb:.1f} KB | Mode: {mode}")
+            self.lbl_comp_file_path.configure(text=f"Selected: {path.name}")
+            self.lbl_comp_dims.configure(text=f"Dimensions: {w}x{h} | Size: {file_size_kb:.1f} KB | Mode: {mode}")
 
-            self._display_preview(self.comp_preview_canvas, self.compress_image_obj)
+            self._display_preview(self.lbl_comp_preview, self.compress_image_obj)
             self._set_status(f"Loaded image {path.name} ({w}x{h})")
+
+            # Also sync to Direct Formatter if empty
+            if self.formatter_image_path is None:
+                self._load_formatter_image(path)
         except Exception as e:
             messagebox.showerror("Error Opening Image", f"Failed to open image:\n{e}")
 
@@ -714,9 +722,9 @@ class ImageCompressorApp(tk.Tk):
             messagebox.showwarning("No Image Selected", "Please select an image first.")
             return
 
-        self.btn_run_compress.config(text="⏳ Compressing... (Please wait)", state=tk.DISABLED)
+        self.btn_run_compress.configure(text="⏳ Compressing... (Please wait)", state="disabled")
         self.comp_progressbar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
-        self.comp_progressbar.start(10)
+        self.comp_progressbar.start()
         self._set_status("Scanning image and compressing...")
         self.update_idletasks()
 
@@ -733,9 +741,6 @@ class ImageCompressorApp(tk.Tk):
             auto_txt_path = OUTPUT_DIR / f"{img_stem}_{mode}{qual_suffix}_pixels.txt"
 
             if mode in (MODE_BIN_SMART, MODE_BIN_LOSSLESS):
-                # -------------------------------------------------------------
-                # REAL-LIFE BINARY ENGINE (Direct pure binary compression)
-                # -------------------------------------------------------------
                 stats = PixelCoder.compress_image_to_file(
                     self.compress_image_path or self.compress_image_obj,
                     auto_icomp_path,
@@ -745,7 +750,6 @@ class ImageCompressorApp(tk.Tk):
                 with open(auto_icomp_path, "rb") as f:
                     compressed_bytes = f.read()
 
-                # Generate informational header for the .txt file
                 pixel_str, _ = PixelCoder.scan_image_to_string(
                     self.compress_image_obj,
                     mode=mode,
@@ -754,9 +758,6 @@ class ImageCompressorApp(tk.Tk):
                 with open(auto_txt_path, "w", encoding="utf-8") as f:
                     f.write(pixel_str)
             else:
-                # -------------------------------------------------------------
-                # TEXT-BASED STRING ENGINES (Delta, Pattern, Palette, Hex, RLE, Raw)
-                # -------------------------------------------------------------
                 pixel_str, scan_meta = PixelCoder.scan_image_to_string(
                     self.compress_image_obj,
                     mode=mode,
@@ -796,16 +797,13 @@ class ImageCompressorApp(tk.Tk):
 
         self.comp_progressbar.stop()
         self.comp_progressbar.pack_forget()
-        self.btn_run_compress.config(text="⚡ Compress Image", state=tk.NORMAL)
-        self.btn_save_icomp.config(state=tk.NORMAL)
-        self.btn_save_txt.config(state=tk.NORMAL)
+        self.btn_run_compress.configure(text="⚡ Compress Image", state="normal")
+        self.btn_save_icomp.configure(state="normal")
+        self.btn_save_txt.configure(state="normal")
 
         self.last_saved_icomp_path = auto_icomp_path
-
-        # Also auto-load this saved file into the Decompress tab
         self._load_decompress_file(auto_icomp_path)
 
-        # Update stats label
         orig_kb = stats["original_file_size_bytes"] / 1024
         raw_kb = stats["raw_image_bytes"] / 1024
         comp_kb = stats["compressed_size_bytes"] / 1024
@@ -826,14 +824,12 @@ class ImageCompressorApp(tk.Tk):
             f"• Difference vs Disk File: {savings_file:+.1f}%\n"
             f"• 💾 Saved to: output/{auto_icomp_path.name}"
         )
-        self.lbl_comp_stats.config(text=stats_text, fg=ACCENT_GREEN)
-
-        self.lbl_autosave_notice.config(
+        self.lbl_comp_stats.configure(text=stats_text, text_color=COLOR_SUCCESS)
+        self.lbl_autosave_notice.configure(
             text=f"✅ Automatically saved to output/{auto_icomp_path.name} ({comp_kb:.2f} KB)",
-            fg=ACCENT_GREEN
+            text_color=COLOR_SUCCESS
         )
 
-        # Show snippet of pixel string
         lines = pixel_str.splitlines()
         preview_lines = lines[:15]
         if len(lines) > 15:
@@ -846,13 +842,12 @@ class ImageCompressorApp(tk.Tk):
     def _on_compression_error(self, error_msg: str):
         self.comp_progressbar.stop()
         self.comp_progressbar.pack_forget()
-        self.btn_run_compress.config(text="⚡ Compress Image", state=tk.NORMAL)
-        self.lbl_comp_stats.config(text=f"❌ Error during compression:\n{error_msg}", fg=ACCENT_RED)
+        self.btn_run_compress.configure(text="⚡ Compress Image", state="normal")
+        self.lbl_comp_stats.configure(text=f"❌ Error during compression:\n{error_msg}", text_color="#ef4444")
         messagebox.showerror("Compression Error", f"Failed to compress image:\n{error_msg}")
         self._set_status("Compression failed.")
 
     def _open_output_folder(self):
-        """Opens the output directory in Windows Explorer."""
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         os.startfile(str(OUTPUT_DIR))
 
@@ -895,9 +890,9 @@ class ImageCompressorApp(tk.Tk):
             self._set_status(f"Saved pixel string to {Path(file_path).name}")
             messagebox.showinfo("Saved", f"Pixel string saved successfully to:\n{file_path}")
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
     # DECOMPRESS EVENT HANDLERS
-    # -------------------------------------------------------------------------
+    # =========================================================================
     def _browse_decompress_file(self):
         initial_dir = OUTPUT_DIR if OUTPUT_DIR.exists() else Path.cwd()
         file_path = filedialog.askopenfilename(
@@ -911,16 +906,16 @@ class ImageCompressorApp(tk.Tk):
     def _load_decompress_file(self, path: Path):
         self.decompress_file_path = path
         size_kb = path.stat().st_size / 1024
-        self.lbl_decomp_file_path.config(text=f"Selected: {path.name} ({size_kb:.2f} KB)")
-        self.btn_run_decompress.config(state=tk.NORMAL)
+        self.lbl_decomp_file_path.configure(text=f"Selected: {path.name} ({size_kb:.2f} KB)")
+        self.btn_run_decompress.configure(state="normal")
         self._set_status(f"Loaded compressed file {path.name}")
 
     def _start_decompress_thread(self):
         if not self.decompress_file_path:
             return
-        self.btn_run_decompress.config(text="⏳ Decompressing... (Please wait)", state=tk.DISABLED)
-        self.decomp_progressbar.pack(fill=tk.X, pady=5)
-        self.decomp_progressbar.start(10)
+        self.btn_run_decompress.configure(text="⏳ Decompressing... (Please wait)", state="disabled")
+        self.decomp_progressbar.pack(fill=tk.X, padx=10, pady=(0, 10))
+        self.decomp_progressbar.start()
         self._set_status("Decompressing file and reconstructing image pixels...")
         self.update_idletasks()
 
@@ -939,14 +934,14 @@ class ImageCompressorApp(tk.Tk):
 
         self.decomp_progressbar.stop()
         self.decomp_progressbar.pack_forget()
-        self.btn_run_decompress.config(text="🔄 Decompress & Reconstruct Image", state=tk.NORMAL)
-        self.btn_save_restored_png.config(state=tk.NORMAL)
-        self.btn_save_restored_webp.config(state=tk.NORMAL)
-        self.btn_save_restored_jpeg.config(state=tk.NORMAL)
+        self.btn_run_decompress.configure(text="🔄 Decompress & Reconstruct Image", state="normal")
+        self.btn_save_restored_png.configure(state="normal")
+        self.btn_save_restored_webp.configure(state="normal")
+        self.btn_save_restored_jpeg.configure(state="normal")
 
         w, h = recon_img.size
-        self.lbl_recon_dims.config(text=f"Dimensions: {w}x{h} | Total Pixels: {w*h:,}")
-        self._display_preview(self.decomp_preview_canvas, recon_img)
+        self.lbl_recon_dims.configure(text=f"Dimensions: {w}x{h} | Total Pixels: {w*h:,}")
+        self._display_preview(self.lbl_decomp_preview, recon_img)
 
         format_name = recon_meta.get("format", "unknown").upper()
         q_info = f" (Q-Factor={recon_meta['q_factor']})" if "q_factor" in recon_meta else ""
@@ -956,14 +951,14 @@ class ImageCompressorApp(tk.Tk):
             f"• Reconstructed Size: {w}x{h} ({w*h:,} pixels)\n"
             f"• Decompression Duration: {recon_meta.get('reconstruction_time_sec', 0.0):.3f}s"
         )
-        self.lbl_decomp_stats.config(text=stats_text, fg=ACCENT_GREEN)
+        self.lbl_decomp_stats.configure(text=stats_text, text_color=COLOR_SUCCESS)
         self._set_status(f"Decompression completed: {w}x{h} image restored.")
 
     def _on_decompression_error(self, error_msg: str):
         self.decomp_progressbar.stop()
         self.decomp_progressbar.pack_forget()
-        self.btn_run_decompress.config(text="🔄 Decompress & Reconstruct Image", state=tk.NORMAL)
-        self.lbl_decomp_stats.config(text=f"❌ Error during decompression:\n{error_msg}", fg=ACCENT_RED)
+        self.btn_run_decompress.configure(text="🔄 Decompress & Reconstruct Image", state="normal")
+        self.lbl_decomp_stats.configure(text=f"❌ Error during decompression:\n{error_msg}", text_color="#ef4444")
         messagebox.showerror("Decompression Error", f"Failed to decompress file:\n{error_msg}")
         self._set_status("Decompression failed.")
 
@@ -1003,9 +998,9 @@ class ImageCompressorApp(tk.Tk):
             self._set_status(f"Saved restored image to {Path(file_path).name}")
             messagebox.showinfo("Saved", f"Restored image saved successfully to:\n{file_path}")
 
-    # -------------------------------------------------------------------------
-    # VERIFIER EVENT HANDLERS (Asynchronous with visual progress)
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # VERIFIER EVENT HANDLERS
+    # =========================================================================
     def _start_verification_thread(self):
         if not self.compress_image_obj:
             messagebox.showwarning("Missing Original", "Please load an original image first in the 'Compress' tab.")
@@ -1014,9 +1009,9 @@ class ImageCompressorApp(tk.Tk):
             messagebox.showwarning("Missing Reconstructed", "Please decompress an image first in the 'Decompress' tab.")
             return
 
-        self.btn_verify.config(text="⏳ Verifying Pixels... (Please wait)", state=tk.DISABLED)
-        self.verifier_progressbar.pack(anchor="w", fill=tk.X, pady=(0, 15))
-        self.verifier_progressbar.start(10)
+        self.btn_verify.configure(text="⏳ Verifying Pixels... (Please wait)", state="disabled")
+        self.verifier_progressbar.pack(anchor="w", padx=20, pady=(0, 15))
+        self.verifier_progressbar.start()
         self._set_status("Running pixel-by-pixel verification...")
         self.update_idletasks()
 
@@ -1032,7 +1027,7 @@ class ImageCompressorApp(tk.Tk):
     def _on_verification_complete(self, verification: dict):
         self.verifier_progressbar.stop()
         self.verifier_progressbar.pack_forget()
-        self.btn_verify.config(text="🔬 Run Verification On Current Images", state=tk.NORMAL)
+        self.btn_verify.configure(text="🔬 Run Verification On Current Images", state="normal")
 
         if verification["is_identical"]:
             report = (
@@ -1044,7 +1039,7 @@ class ImageCompressorApp(tk.Tk):
                 f"• Match Percentage: 100.000%\n\n"
                 f"The reconstructed image is identical to the original down to the exact pixel color values."
             )
-            self.lbl_verifier_output.config(text=report, fg=ACCENT_GREEN)
+            self.lbl_verifier_output.configure(text=report, text_color=COLOR_SUCCESS)
             self._set_status("Lossless verification passed: 100% identical!")
         else:
             report = (
@@ -1056,37 +1051,487 @@ class ImageCompressorApp(tk.Tk):
                 f"• Max Difference: {verification.get('max_difference', 'N/A')}\n"
                 f"(Note: If you used Quality < 100%, slight quantization differences are expected for smaller file size)."
             )
-            self.lbl_verifier_output.config(text=report, fg=ACCENT_YELLOW)
+            self.lbl_verifier_output.configure(text=report, text_color="#facc15")
             self._set_status("Verification complete.")
 
     def _on_verification_error(self, error_msg: str):
         self.verifier_progressbar.stop()
         self.verifier_progressbar.pack_forget()
-        self.btn_verify.config(text="🔬 Run Verification On Current Images", state=tk.NORMAL)
+        self.btn_verify.configure(text="🔬 Run Verification On Current Images", state="normal")
         messagebox.showerror("Verification Error", f"Failed to verify images:\n{error_msg}")
         self._set_status("Verification failed.")
 
-    # -------------------------------------------------------------------------
+    # =========================================================================
+    # TAB 4: DIRECT FORMATTER
+    # =========================================================================
+    def _build_formatter_tab(self):
+        parent = self.tab_formatter
+
+        container = ctk.CTkFrame(parent, fg_color="transparent")
+        container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # Left Column: Image Selection & Preview
+        left_frame = ctk.CTkFrame(container, corner_radius=10, fg_color=COLOR_CARD, width=360)
+        left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10), pady=5)
+        left_frame.pack_propagate(False)
+
+        lbl_step1 = ctk.CTkLabel(
+            left_frame,
+            text="Step 1: Select Input Image",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color="#f59e0b"
+        )
+        lbl_step1.pack(anchor="w", padx=15, pady=(15, 6))
+
+        btn_browse = ctk.CTkButton(
+            left_frame,
+            text="📂 Browse Image...",
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            fg_color="#f59e0b",
+            hover_color="#d97706",
+            command=self._browse_formatter_image
+        )
+        btn_browse.pack(fill=tk.X, padx=15, pady=(0, 6))
+
+        self.lbl_format_file_path = ctk.CTkLabel(
+            left_frame,
+            text="No image selected",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color=COLOR_TEXT_MUTED,
+            wraplength=320,
+            justify="left"
+        )
+        self.lbl_format_file_path.pack(anchor="w", padx=15, pady=(0, 6))
+
+        # Preview Container
+        preview_box = ctk.CTkFrame(left_frame, corner_radius=8, fg_color=COLOR_CARD_SUB, height=310)
+        preview_box.pack(fill=tk.X, padx=15, pady=4)
+        preview_box.pack_propagate(False)
+
+        self.lbl_format_preview = ctk.CTkLabel(preview_box, text="Image Preview", text_color=COLOR_TEXT_MUTED)
+        self.lbl_format_preview.pack(expand=True)
+
+        self.lbl_format_dims = ctk.CTkLabel(
+            left_frame,
+            text="Dimensions: - | Size: - | Mode: -",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color=COLOR_TEXT_MUTED
+        )
+        self.lbl_format_dims.pack(padx=15, pady=(6, 10))
+
+        btn_open_out = ctk.CTkButton(
+            left_frame,
+            text="📁 Open Output Folder",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
+            command=self._open_output_folder
+        )
+        btn_open_out.pack(fill=tk.X, padx=15, pady=(0, 15))
+
+        # Right Column: Scrollable Format Options & Action
+        right_scroll = ctk.CTkScrollableFrame(container, corner_radius=10, fg_color=COLOR_CARD)
+        right_scroll.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=5)
+
+        lbl_step2 = ctk.CTkLabel(
+            right_scroll,
+            text="Step 2: Choose Output Format & Quality Preset",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color="#f59e0b"
+        )
+        lbl_step2.pack(anchor="w", padx=10, pady=(10, 4))
+
+        preset_box = ctk.CTkFrame(right_scroll, corner_radius=8, fg_color=COLOR_CARD_SUB)
+        preset_box.pack(fill=tk.X, padx=10, pady=(0, 8))
+
+        # Modern WebP Section
+        lbl_webp_hdr = ctk.CTkLabel(
+            preset_box,
+            text="🚀 MODERN WEBP FORMAT (RECOMMENDED — BEST COMPRESSION & QUALITY):",
+            font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
+            text_color=COLOR_SUCCESS
+        )
+        lbl_webp_hdr.pack(anchor="w", padx=12, pady=(8, 2))
+
+        rb_w95 = ctk.CTkRadioButton(
+            preset_box,
+            text="🚀 WebP High Quality 95% (Near-lossless visual fidelity, ~70% smaller than JPEG/PNG)\n   Preserves crisp details with advanced entropy coding. Ideal for photos & modern web.",
+            value="webp_95",
+            variable=self.formatter_preset_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
+        )
+        rb_w95.pack(anchor="w", padx=12, pady=3)
+
+        rb_w85 = ctk.CTkRadioButton(
+            preset_box,
+            text="⚡ WebP Balanced 85% (~80% smaller, ultra-fast loading for web & mobile)\n   Sweet spot between high quality and tiny file size.",
+            value="webp_85",
+            variable=self.formatter_preset_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
+        )
+        rb_w85.pack(anchor="w", padx=12, pady=3)
+
+        rb_w75 = ctk.CTkRadioButton(
+            preset_box,
+            text="📦 WebP Standard 75% (Maximum WebP size reduction)\n   Smallest web file size while retaining good visual clarity.",
+            value="webp_75",
+            variable=self.formatter_preset_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
+        )
+        rb_w75.pack(anchor="w", padx=12, pady=3)
+
+        rb_wlossless = ctk.CTkRadioButton(
+            preset_box,
+            text="🛡️ WebP Lossless 100% (Bit-for-bit exact pixels, ~25-35% smaller than PNG)\n   True lossless mathematical encoding without any pixel error.",
+            value="webp_lossless",
+            variable=self.formatter_preset_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
+        )
+        rb_wlossless.pack(anchor="w", padx=12, pady=3)
+
+        # Optimized JPEG Section
+        lbl_jpeg_hdr = ctk.CTkLabel(
+            preset_box,
+            text="📸 OPTIMIZED JPEG FORMAT (UNIVERSAL COMPATIBILITY):",
+            font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
+            text_color=COLOR_PRIMARY
+        )
+        lbl_jpeg_hdr.pack(anchor="w", padx=12, pady=(10, 2))
+
+        rb_j95 = ctk.CTkRadioButton(
+            preset_box,
+            text="⭐ JPEG High Quality 95% (~914 KB, Full 4:4:4 color subsampling)\n   Strips bloated metadata while keeping 100% full color resolution without color bleed.",
+            value="jpeg_95",
+            variable=self.formatter_preset_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
+        )
+        rb_j95.pack(anchor="w", padx=12, pady=3)
+
+        rb_j75 = ctk.CTkRadioButton(
+            preset_box,
+            text="⚡ JPEG Standard 75% (~187 KB, Standard 4:2:0 subsampling)\n   High reduction, perfect for emails, documents, and standard web sharing.",
+            value="jpeg_75",
+            variable=self.formatter_preset_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
+        )
+        rb_j75.pack(anchor="w", padx=12, pady=3)
+
+        rb_j60 = ctk.CTkRadioButton(
+            preset_box,
+            text="📦 JPEG Compact 60% (~130 KB, Maximum size reduction)\n   Smallest JPEG file size for thumbnails and bandwidth-constrained devices.",
+            value="jpeg_60",
+            variable=self.formatter_preset_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
+        )
+        rb_j60.pack(anchor="w", padx=12, pady=3)
+
+        # Lossless PNG Section
+        lbl_png_hdr = ctk.CTkLabel(
+            preset_box,
+            text="💎 LOSSLESS PNG FORMAT (PRESERVES TRANSPARENCY):",
+            font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
+            text_color="#cba6f7"
+        )
+        lbl_png_hdr.pack(anchor="w", padx=12, pady=(10, 2))
+
+        rb_png = ctk.CTkRadioButton(
+            preset_box,
+            text="💎 Lossless PNG (Optimized zlib level 9, 100% exact pixels)\n   Preserves alpha channels and transparency with lossless compression.",
+            value="png_lossless",
+            variable=self.formatter_preset_var,
+            font=ctk.CTkFont(family="Segoe UI", size=11)
+        )
+        rb_png.pack(anchor="w", padx=12, pady=(3, 8))
+
+        # Step 3: Run Format & Optimize
+        lbl_step3 = ctk.CTkLabel(
+            right_scroll,
+            text="Step 3: Convert & Optimize (Auto-saves to output/)",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color="#f59e0b"
+        )
+        lbl_step3.pack(anchor="w", padx=10, pady=(4, 4))
+
+        format_action_row = ctk.CTkFrame(right_scroll, fg_color="transparent")
+        format_action_row.pack(fill=tk.X, padx=10, pady=(0, 6))
+
+        self.btn_run_format = ctk.CTkButton(
+            format_action_row,
+            text="⚡ Format & Optimize Now",
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            fg_color="#f59e0b",
+            hover_color="#d97706",
+            height=36,
+            command=self._start_format_thread
+        )
+        self.btn_run_format.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.format_progressbar = ctk.CTkProgressBar(format_action_row, mode="indeterminate", width=220)
+
+        # Stats Card
+        self.format_stats_box = ctk.CTkFrame(right_scroll, corner_radius=8, fg_color=COLOR_CARD_SUB)
+        self.format_stats_box.pack(fill=tk.X, padx=10, pady=(0, 8))
+
+        self.lbl_format_stats = ctk.CTkLabel(
+            self.format_stats_box,
+            text="Formatting statistics and size reduction comparison will appear here.",
+            font=ctk.CTkFont(family="Consolas", size=11),
+            text_color=COLOR_TEXT_MUTED,
+            justify="left",
+            anchor="w"
+        )
+        self.lbl_format_stats.pack(anchor="w", padx=12, pady=10)
+
+        self.lbl_format_autosave_notice = ctk.CTkLabel(
+            right_scroll,
+            text="",
+            font=ctk.CTkFont(family="Segoe UI", size=10),
+            text_color=COLOR_SUCCESS,
+            anchor="w"
+        )
+        self.lbl_format_autosave_notice.pack(anchor="w", padx=10, pady=(0, 8))
+
+        # Step 4: Actions
+        lbl_step4 = ctk.CTkLabel(
+            right_scroll,
+            text="Step 4: Output Actions",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color="#f59e0b"
+        )
+        lbl_step4.pack(anchor="w", padx=10, pady=(4, 4))
+
+        actions_row = ctk.CTkFrame(right_scroll, fg_color="transparent")
+        actions_row.pack(fill=tk.X, padx=10, pady=(0, 15))
+
+        self.btn_open_formatted_file = ctk.CTkButton(
+            actions_row,
+            text="👁️ Open Formatted Image",
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color=COLOR_SUCCESS,
+            hover_color=COLOR_SUCCESS_HOVER,
+            state="disabled",
+            command=self._open_last_formatted_file
+        )
+        self.btn_open_formatted_file.pack(side=tk.LEFT, padx=(0, 8))
+
+        self.btn_save_format_copy = ctk.CTkButton(
+            actions_row,
+            text="💾 Save Copy As...",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
+            state="disabled",
+            command=self._save_formatted_file_copy
+        )
+        self.btn_save_format_copy.pack(side=tk.LEFT, padx=(0, 8))
+
+        btn_open_folder2 = ctk.CTkButton(
+            actions_row,
+            text="📁 Open output/ Folder",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            fg_color=COLOR_SECONDARY,
+            hover_color=COLOR_SECONDARY_HOVER,
+            command=self._open_output_folder
+        )
+        btn_open_folder2.pack(side=tk.LEFT)
+
+    # =========================================================================
+    # DIRECT FORMATTER EVENT HANDLERS
+    # =========================================================================
+    def _browse_formatter_image(self):
+        initial_dir = IMAGES_DIR if IMAGES_DIR.exists() else Path.cwd()
+        file_path = filedialog.askopenfilename(
+            title="Select Image to Format & Optimize",
+            initialdir=str(initial_dir),
+            filetypes=IMAGE_EXTENSIONS
+        )
+        if file_path:
+            self._load_formatter_image(Path(file_path))
+
+    def _load_formatter_image(self, path: Path):
+        try:
+            self.formatter_image_path = path
+            self.formatter_image_obj = Image.open(path)
+
+            file_size_kb = path.stat().st_size / 1024
+            w, h = self.formatter_image_obj.size
+            mode = self.formatter_image_obj.mode
+
+            self.lbl_format_file_path.configure(text=f"Selected: {path.name}")
+            self.lbl_format_dims.configure(text=f"Dimensions: {w}x{h} | Size: {file_size_kb:.1f} KB | Mode: {mode}")
+
+            self._display_preview(self.lbl_format_preview, self.formatter_image_obj)
+            self._set_status(f"Loaded image {path.name} for direct formatting ({w}x{h})")
+        except Exception as e:
+            messagebox.showerror("Error Opening Image", f"Failed to open image:\n{e}")
+
+    def _start_format_thread(self):
+        if not self.formatter_image_obj:
+            messagebox.showwarning("No Image Selected", "Please select an image first.")
+            return
+
+        self.btn_run_format.configure(text="⏳ Formatting & Optimizing... (Please wait)", state="disabled")
+        self.format_progressbar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+        self.format_progressbar.start()
+        self._set_status("Directly formatting and optimizing image...")
+        self.update_idletasks()
+
+        preset = self.formatter_preset_var.get()
+        threading.Thread(target=self._execute_formatting, args=(preset,), daemon=True).start()
+
+    def _execute_formatting(self, preset: str):
+        try:
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+            stem = self.formatter_image_path.stem if self.formatter_image_path else "formatted"
+
+            if preset == "webp_95":
+                out_path = OUTPUT_DIR / f"{stem}_optimized_q95.webp"
+                result = PixelCoder.format_image_direct(
+                    self.formatter_image_path or self.formatter_image_obj,
+                    out_path, target_format="WEBP", quality=95
+                )
+            elif preset == "webp_85":
+                out_path = OUTPUT_DIR / f"{stem}_optimized_q85.webp"
+                result = PixelCoder.format_image_direct(
+                    self.formatter_image_path or self.formatter_image_obj,
+                    out_path, target_format="WEBP", quality=85
+                )
+            elif preset == "webp_75":
+                out_path = OUTPUT_DIR / f"{stem}_optimized_q75.webp"
+                result = PixelCoder.format_image_direct(
+                    self.formatter_image_path or self.formatter_image_obj,
+                    out_path, target_format="WEBP", quality=75
+                )
+            elif preset == "webp_lossless":
+                out_path = OUTPUT_DIR / f"{stem}_lossless.webp"
+                result = PixelCoder.format_image_direct(
+                    self.formatter_image_path or self.formatter_image_obj,
+                    out_path, target_format="WEBP", quality=100, lossless=True
+                )
+            elif preset == "jpeg_95":
+                out_path = OUTPUT_DIR / f"{stem}_optimized_q95.jpeg"
+                result = PixelCoder.format_image_direct(
+                    self.formatter_image_path or self.formatter_image_obj,
+                    out_path, target_format="JPEG", quality=95, subsampling=0
+                )
+            elif preset == "jpeg_75":
+                out_path = OUTPUT_DIR / f"{stem}_optimized_q75.jpeg"
+                result = PixelCoder.format_image_direct(
+                    self.formatter_image_path or self.formatter_image_obj,
+                    out_path, target_format="JPEG", quality=75, subsampling=2
+                )
+            elif preset == "jpeg_60":
+                out_path = OUTPUT_DIR / f"{stem}_optimized_q60.jpeg"
+                result = PixelCoder.format_image_direct(
+                    self.formatter_image_path or self.formatter_image_obj,
+                    out_path, target_format="JPEG", quality=60, subsampling=2
+                )
+            elif preset == "png_lossless":
+                out_path = OUTPUT_DIR / f"{stem}_optimized.png"
+                result = PixelCoder.format_image_direct(
+                    self.formatter_image_path or self.formatter_image_obj,
+                    out_path, target_format="PNG", lossless=True
+                )
+            else:
+                out_path = OUTPUT_DIR / f"{stem}_optimized.webp"
+                result = PixelCoder.format_image_direct(
+                    self.formatter_image_path or self.formatter_image_obj,
+                    out_path, target_format="WEBP", quality=95
+                )
+
+            self.after(0, self._on_format_complete, result)
+        except Exception as e:
+            self.after(0, self._on_format_error, str(e))
+
+    def _on_format_complete(self, result: dict):
+        self.last_formatted_path = result["output_path"]
+
+        self.format_progressbar.stop()
+        self.format_progressbar.pack_forget()
+        self.btn_run_format.configure(text="⚡ Format & Optimize Now", state="normal")
+        self.btn_open_formatted_file.configure(state="normal")
+        self.btn_save_format_copy.configure(state="normal")
+
+        orig_kb = result["original_size_bytes"] / 1024
+        out_kb = result["output_size_bytes"] / 1024
+        savings_kb = result["savings_bytes"] / 1024
+        savings_pct = result["savings_pct"]
+
+        stats_text = (
+            f"🎉 Formatting Succeeded & Automatically Saved!\n"
+            f"• Output Format: {result['target_format']} (Quality={result['quality']}%)\n"
+            f"• Dimensions: {result['width']}x{result['height']}\n"
+            f"• Original File on Disk: {orig_kb:.2f} KB ({result['original_size_bytes']:,} bytes)\n"
+            f"• Optimized Output Size: {out_kb:.2f} KB ({result['output_size_bytes']:,} bytes)\n"
+            f"• Space Saved: {savings_pct:+.1f}% ({savings_kb:.1f} KB saved)\n"
+            f"• Processing Time: {result['duration_sec']:.3f}s\n"
+            f"• 💾 Saved to: output/{result['output_path'].name}"
+        )
+        self.lbl_format_stats.configure(text=stats_text, text_color=COLOR_SUCCESS)
+        self.lbl_format_autosave_notice.configure(
+            text=f"✅ Automatically saved to output/{result['output_path'].name} ({out_kb:.2f} KB)",
+            text_color=COLOR_SUCCESS
+        )
+        self._set_status(f"Format complete: output/{result['output_path'].name} ({out_kb:.2f} KB, {savings_pct:+.1f}%)")
+
+    def _on_format_error(self, error_msg: str):
+        self.format_progressbar.stop()
+        self.format_progressbar.pack_forget()
+        self.btn_run_format.configure(text="⚡ Format & Optimize Now", state="normal")
+        self.lbl_format_stats.configure(text=f"❌ Error during formatting:\n{error_msg}", text_color="#ef4444")
+        messagebox.showerror("Formatting Error", f"Failed to format image:\n{error_msg}")
+        self._set_status("Formatting failed.")
+
+    def _open_last_formatted_file(self):
+        if self.last_formatted_path and self.last_formatted_path.exists():
+            os.startfile(str(self.last_formatted_path))
+
+    def _save_formatted_file_copy(self):
+        if not self.last_formatted_path or not self.last_formatted_path.exists():
+            return
+        ext = self.last_formatted_path.suffix.lower()
+        if ext == ".webp":
+            types = [("WebP Image (*.webp)", "*.webp"), ("All Files", "*.*")]
+        elif ext in (".jpeg", ".jpg"):
+            types = [("JPEG Image (*.jpeg;*.jpg)", "*.jpeg;*.jpg"), ("All Files", "*.*")]
+        elif ext == ".png":
+            types = [("PNG Image (*.png)", "*.png"), ("All Files", "*.*")]
+        else:
+            types = [("All Files", "*.*")]
+
+        file_path = filedialog.asksaveasfilename(
+            title="Save Formatted Copy As...",
+            initialdir=str(OUTPUT_DIR),
+            initialfile=self.last_formatted_path.name,
+            defaultextension=ext,
+            filetypes=types
+        )
+        if file_path:
+            with open(self.last_formatted_path, "rb") as src_f, open(file_path, "wb") as dst_f:
+                dst_f.write(src_f.read())
+            self._set_status(f"Saved copy to {Path(file_path).name}")
+            messagebox.showinfo("Saved", f"Copy saved successfully to:\n{file_path}")
+
+    # =========================================================================
     # HELPERS
-    # -------------------------------------------------------------------------
-    def _display_preview(self, canvas: tk.Canvas, img: Image.Image):
-        canvas_w = canvas.winfo_reqwidth() or 310
-        canvas_h = canvas.winfo_reqheight() or 310
+    # =========================================================================
+    def _display_preview(self, label: ctk.CTkLabel, img: Image.Image, max_w: int = 320, max_h: int = 300):
+        """Creates a high-DPI aspect-ratio preserved preview in a CTkLabel."""
+        orig_w, orig_h = img.size
+        ratio = min(max_w / orig_w, max_h / orig_h)
+        thumb_w = max(1, int(orig_w * ratio))
+        thumb_h = max(1, int(orig_h * ratio))
 
-        thumb = img.copy()
-        thumb.thumbnail((canvas_w - 20, canvas_h - 20), Image.Resampling.BILINEAR)
-
-        photo = ImageTk.PhotoImage(thumb)
-        canvas.delete("all")
-        canvas.create_image(canvas_w // 2, canvas_h // 2, image=photo)
-        canvas.image = photo
+        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(thumb_w, thumb_h))
+        label.configure(image=ctk_img, text="")
+        label.image = ctk_img
 
     def _set_status(self, text: str):
-        self.status_bar.config(text=f"Status: {text}")
+        self.status_bar.configure(text=f"Status: {text}")
 
 
 def launch_gui():
-    """Launches the Tkinter application."""
+    """Launches the CustomTkinter desktop application."""
     app = ImageCompressorApp()
     app.mainloop()
 

@@ -844,3 +844,86 @@ class PixelCoder:
             "match_percentage": match_pct,
             "max_difference": max_diff,
         }
+
+    @staticmethod
+    def format_image_direct(
+        image_input: Union[str, Path, Image.Image],
+        output_path: Union[str, Path],
+        target_format: str = "WEBP",
+        quality: int = 95,
+        subsampling: int = 0,
+        optimize: bool = True,
+        lossless: bool = False,
+    ) -> dict[str, Any]:
+        """Directly formats and optimizes an image into Modern WebP, JPEG, or PNG.
+
+        Strips bloated metadata (EXIF/ICC) and applies optimized compression.
+
+        Args:
+            image_input: File path or PIL Image object.
+            output_path: Destination file path.
+            target_format: "WEBP", "JPEG" (or "JPG"), or "PNG".
+            quality: Compression quality (1-100).
+            subsampling: Chroma subsampling for JPEG (0=4:4:4 full color, 2=4:2:0 standard).
+            optimize: Enable encoder optimization.
+            lossless: Enable lossless encoding (supported for WEBP and PNG).
+
+        Returns:
+            Dictionary with format stats and size reduction info.
+        """
+        start_time = time.perf_counter()
+        out_path = Path(output_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        orig_size = 0
+        if isinstance(image_input, (str, Path)):
+            in_path = Path(image_input)
+            if in_path.exists():
+                orig_size = in_path.stat().st_size
+            img = Image.open(in_path)
+        else:
+            img = image_input
+
+        fmt = target_format.upper()
+        if fmt in ("JPG", "JPEG"):
+            fmt = "JPEG"
+            if img.mode in ("RGBA", "LA", "P"):
+                bg = Image.new("RGB", img.size, (255, 255, 255))
+                if img.mode == "RGBA":
+                    bg.paste(img, mask=img.split()[3])
+                else:
+                    bg.paste(img.convert("RGBA"))
+                img = bg
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
+
+            sub = subsampling if quality >= 90 else (2 if subsampling == 0 else subsampling)
+            img.save(out_path, format="JPEG", quality=quality, subsampling=sub, optimize=optimize)
+        elif fmt == "WEBP":
+            if lossless or quality == 100:
+                img.save(out_path, format="WEBP", lossless=True, quality=100, method=6)
+            else:
+                img.save(out_path, format="WEBP", quality=quality, method=6)
+        elif fmt == "PNG":
+            img.save(out_path, format="PNG", optimize=optimize, compress_level=9)
+        else:
+            img.save(out_path, format=fmt)
+
+        output_size = out_path.stat().st_size
+        savings_bytes = orig_size - output_size
+        savings_pct = ((orig_size - output_size) / orig_size * 100) if orig_size > 0 else 0.0
+        elapsed_sec = time.perf_counter() - start_time
+
+        return {
+            "output_path": out_path,
+            "target_format": fmt,
+            "quality": quality,
+            "width": img.width,
+            "height": img.height,
+            "original_size_bytes": orig_size,
+            "output_size_bytes": output_size,
+            "savings_bytes": savings_bytes,
+            "savings_pct": savings_pct,
+            "duration_sec": elapsed_sec,
+        }
+

@@ -50,7 +50,19 @@ A Python desktop application that scans images row-by-row and column-by-column i
 
 ---
 
-## 🖥️ Running the Desktop GUI
+## 🖥️ Modern CustomTkinter Desktop GUI
+
+Built with **CustomTkinter** for Windows 11 / macOS dark mode aesthetics:
+- **⚡ Compress Image**: Select input image, choose from 8 algorithms & quality targets (Lossless, 85%, 65%), auto-saves `.icomp` and preview string.
+- **🔄 Decompress Image**: Reconstructs exact images from `.icomp` files. Export to Lossless PNG, Modern WebP (~560 KB), or selectable JPEG qualities (High 95%, Standard 75%, Compact 60%).
+- **🔍 Lossless Verifier**: C-accelerated (`ImageChops`) pixel-for-pixel difference check (runs across millions of pixels in <100 ms).
+- **⚡ Direct Formatter**: One-click direct optimizer & converter. Converts images to Modern WebP (95%, 85%, 75%, Lossless), Optimized JPEG (95% 4:4:4, 75%, 60%), or Lossless PNG with instant size reduction calculations.
+- **Dark / Light Mode**: Seamless theme toggle in the header.
+- **Responsive & Asynchronous**: All compression, decompression, and verification processes run on background worker threads with loading animations so the UI never freezes.
+
+---
+
+## 🚀 Running the Desktop GUI
 
 ```powershell
 & "f:\IJSE\THIRED SEM\PYTHON\image_compreser\.venv\Scripts\python.exe" src/my_app/main.py
@@ -76,3 +88,4 @@ A Python desktop application that scans images row-by-row and column-by-column i
   ```powershell
   python src/my_app/main.py --verify images/ICtest.jpeg output/restored.png
   ```
+

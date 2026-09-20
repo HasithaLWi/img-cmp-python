@@ -108,6 +108,34 @@ class TestPixelCoder(unittest.TestCase):
             if out_png.exists():
                 out_png.unlink()
 
+    def test_direct_formatter(self):
+        webp_out = Path("output/test_direct.webp")
+        jpeg_out = Path("output/test_direct.jpeg")
+        png_out = Path("output/test_direct.png")
+        try:
+            # WebP test
+            res_webp = PixelCoder.format_image_direct(self.image_path, webp_out, target_format="WEBP", quality=95)
+            self.assertTrue(webp_out.exists())
+            self.assertEqual(res_webp["target_format"], "WEBP")
+            self.assertGreater(res_webp["output_size_bytes"], 0)
+
+            # JPEG test
+            res_jpeg = PixelCoder.format_image_direct(self.image_path, jpeg_out, target_format="JPEG", quality=95, subsampling=0)
+            self.assertTrue(jpeg_out.exists())
+            self.assertEqual(res_jpeg["target_format"], "JPEG")
+            self.assertGreater(res_jpeg["output_size_bytes"], 0)
+
+            # PNG test
+            res_png = PixelCoder.format_image_direct(self.image_path, png_out, target_format="PNG", lossless=True)
+            self.assertTrue(png_out.exists())
+            self.assertEqual(res_png["target_format"], "PNG")
+            self.assertGreater(res_png["output_size_bytes"], 0)
+        finally:
+            for p in (webp_out, jpeg_out, png_out):
+                if p.exists():
+                    p.unlink()
+
 
 if __name__ == "__main__":
     unittest.main()
+
