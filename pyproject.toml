@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pixelscan-image-compressor"
+version = "1.0.0"
+description = "Pixel scanning row-column image compressor and decompressor with Tkinter Desktop GUI"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "Pillow>=10.0.0",
+]
+
+[project.scripts]
+image-compressor = "src.my_app.main:main"
